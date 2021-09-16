@@ -1,0 +1,10 @@
+classpath*:desc/types/BaseToken.xml
+classpath*:desc/types/Note_Nlp_TableProperties.xml
+classpath*:desc/types/Note_TableProperties.xml
+classpath*:desc/types/Sentence.xml
+classpath*:desc/types/SourceDocumentInformation.xml
+classpath*:desc/types/TokenAnnotation.xml
+classpath*:desc/types/TypeSystem.xml
+classpath*:desc/types/UmlsTerm.xml
+classpath*:desc/types/OntologyConcept.xml
+classpath*:desc/types/IdentifiedAnnotation.xml

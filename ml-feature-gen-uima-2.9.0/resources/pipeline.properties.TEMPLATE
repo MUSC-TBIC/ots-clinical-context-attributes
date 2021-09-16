@@ -1,0 +1,15 @@
+fit.test_flag = true
+fit.reader = Text Reader
+fit.engines = cTAKES SBD, OpenNLP Tokenizer, Context Attributes
+fit.writers = XML Out
+
+fs.in.text = data/test/in/xmi
+
+fs.out.xmi = data/test/out/xmi
+fs.out.tsv = 
+fs.out.note_nlp = 
+
+fs.error.xmi = /tmp/featuregen/error_xmi
+fs.error.tsv = 
+fs.error.note_nlp = 
+

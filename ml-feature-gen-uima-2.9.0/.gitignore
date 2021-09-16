@@ -1,0 +1,5 @@
+
+resources/openNlpModels/*.bin
+resources/ctakesModels/*.zip
+
+metadata/

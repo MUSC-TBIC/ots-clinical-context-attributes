@@ -1,0 +1,11 @@
+
+\#*
+\.\#*
+.*~
+
+pipeline.properties
+
+.settings/
+target/
+
+logs/
