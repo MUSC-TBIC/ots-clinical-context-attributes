@@ -491,7 +491,8 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             int cSI = sI;
             while (ea > sents.get(cSI - 1).getEnd()) {
                 sStr += " " + sentStrs.get(cSI++);
-                System.out.println(sStr);
+                mLogger.warn( "The token end (ea=" + Integer.toString( ea ) + 
+                        ") exceeds the sentence end (" + Integer.toString( sents.get(cSI - 1).getEnd() ) + ")" );
             }
 
             int oTn = tokMap.get(sents.get(sI - 1).getBegin());

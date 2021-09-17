@@ -21,9 +21,18 @@ package edu.musc.tbic.readers;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.apache.ctakes.typesystem.type.textsem.IdentifiedAnnotation;
 import org.apache.uima.cas.CAS;
 import org.apache.uima.cas.CASException;
@@ -31,7 +40,6 @@ import org.apache.uima.collection.CollectionException;
 import org.apache.uima.collection.CollectionReader_ImplBase;
 import org.apache.uima.examples.SourceDocumentInformation;
 import org.apache.uima.jcas.JCas;
-//import org.apache.uima.jcas.tcas.DocumentAnnotation;
 import org.apache.uima.resource.ResourceConfigurationException;
 import org.apache.uima.resource.ResourceInitializationException;
 import org.apache.uima.util.FileUtils;
@@ -261,7 +269,95 @@ public class FileSystemCollectionReader extends CollectionReader_ImplBase {
                     mLogger.debug( "Skipping brat files" );
                 } else if( mAnnotationSuffix.equals( ".ast" ) ||
                         mAnnotationSuffix.equals( "ast" ) ){
-                    mLogger.debug( "Skipping assertion files" );
+                    String lines[] = text.split("\\n");
+                    ArrayList<Integer> priorOffset = new ArrayList<>();
+                    priorOffset.add( 0 );
+                    for( int i = 1 ; i < lines.length ; i++ ){
+                        priorOffset.add( priorOffset.get( i - 1 ) + 1 + lines[ i - 1 ].length() );
+                    }
+                    String txtFilename = file.getName();
+                    File annotationFile = new File( mAnnotationDirectory , 
+                            txtFilename.substring( 0 ,
+                                    txtFilename.length() - mAnnotationSuffix.length() ) + mAnnotationSuffix );
+                    Reader fileReader = new FileReader( annotationFile );
+                    CSVParser astParser = CSVParser.parse( fileReader , 
+                            CSVFormat.DEFAULT.withDelimiter( '|' ).withHeader( "span" , 
+                                    "EmptyLeft" ,
+                                    "type" , 
+                                    "EmptyRight" ,
+                                    "assertion" ) );
+                    Iterator<CSVRecord> recordIterator = astParser.iterator();
+                    while( recordIterator.hasNext() ){
+                        CSVRecord astRecord = recordIterator.next();
+                        String conceptSpan = astRecord.get( "span" );
+                        String conceptType = astRecord.get( "type" );
+                        String conceptAssertion = astRecord.get( "assertion" );
+                        // Skip all the non-problems (which should be none)
+                        if( ! conceptType.equalsIgnoreCase( "t=\"problem\"" ) ){
+                            continue;
+                        }
+                        Pattern spanPattern = Pattern.compile( ".* ([0-9]+):([0-9]+) ([0-9]+):([0-9]+)$" );
+                        Matcher matcher = spanPattern.matcher( conceptSpan );
+                        int pos = 0;
+                        int beginLine = -1;
+                        int beginToken = -1;
+                        int endLine = -1;
+                        int endToken = -1;
+                        if( matcher.find() ) {
+                            beginLine = Integer.parseInt( matcher.group( 1 ) );
+                            beginToken = Integer.parseInt( matcher.group( 2 ) );
+                            endLine = Integer.parseInt( matcher.group( 3 ) );
+                            endToken = Integer.parseInt( matcher.group( 4 ) );
+                        }
+                        if( beginLine == -1 ){
+                            continue;
+                        }
+                        String tokens[] = lines[ beginLine - 1 ].split( " " );
+                        ArrayList<Integer> tokenOffset = new ArrayList<>();
+                        tokenOffset.add( 0 );
+                        for( int i = 1 ; i < tokens.length ; i++ ){
+                            tokenOffset.add( tokenOffset.get( i - 1 ) + 1 + tokens[ i - 1 ].length() );
+                        }
+                        int beginOffset = priorOffset.get( beginLine - 1 ) + tokenOffset.get( beginToken );
+                        if( beginLine < endLine ){
+                            tokens = lines[ endLine - 1 ].split( " " );
+                            tokenOffset.clear();
+                            tokenOffset = new ArrayList<>();
+                            tokenOffset.add( 0 );
+                            for( int i = 1 ; i < tokens.length ; i++ ){
+                                tokenOffset.add( tokenOffset.get( i - 1 ) + 1 + tokens[ i - 1 ].length() );
+                            }
+                        }
+                        int endOffset = priorOffset.get( endLine - 1 );
+                        if( endToken + 1 == tokens.length ){
+                            endOffset += lines[ endLine - 1 ].length();
+                        } else {
+                            endOffset += tokenOffset.get( endToken + 1 ) - 1;
+                        }
+                        IdentifiedAnnotation iaConcept = new IdentifiedAnnotation( jcas ,
+                                beginOffset ,
+                                endOffset );
+                        iaConcept.setPolarity( 1 );
+                        iaConcept.setSubject( "patient" );
+                        iaConcept.setConditional( false );
+                        iaConcept.setUncertainty( 1 );
+                        if( conceptAssertion.equalsIgnoreCase( "a=\"present\"" ) ){
+                            iaConcept.setPolarity( 1 );
+                        } else if( conceptAssertion.equalsIgnoreCase( "a=\"absent\"" ) ){
+                            iaConcept.setPolarity( -1 );
+                        } else if( conceptAssertion.equalsIgnoreCase( "a=\"associated_with_someone_else\"" ) ){
+                            iaConcept.setSubject( "not patient" );
+                        } else if( conceptAssertion.equalsIgnoreCase( "a=\"conditional\"" ) ){
+                            iaConcept.setConditional( true );
+                        } else if( conceptAssertion.equalsIgnoreCase( "a=\"possible\"" ) ){
+                            iaConcept.setUncertainty( -1 );
+                        } else if( conceptAssertion.equalsIgnoreCase( "a=\"hypothetical\"" ) ){
+                            iaConcept.setUncertainty( -1 );
+                        } else {
+                            mLogger.warn( "Unrecognized assertion value: " + conceptAssertion );
+                        }
+                        iaConcept.addToIndexes();
+                    }
                 }
             }
         } else if( file.getName().endsWith( ".xmi" ) ){
@@ -301,12 +397,14 @@ public class FileSystemCollectionReader extends CollectionReader_ImplBase {
                     IdentifiedAnnotation iaConcept = new IdentifiedAnnotation( jcas ,
                             beginOffset ,
                             endOffset );
+                    iaConcept.setPolarity( 1 );
+                    iaConcept.setSubject( "patient" );
+                    iaConcept.setConditional( false );
+                    iaConcept.setUncertainty( 1 );
                     if( negatedStatus.equalsIgnoreCase( "false" ) ){
                         iaConcept.setPolarity( 1 );
                     } else if( negatedStatus.equalsIgnoreCase( "true" ) ){
                         iaConcept.setPolarity( -1 );
-                    } else {
-                        iaConcept.setPolarity( 1 );
                     }
                     iaConcept.addToIndexes();
                 }
