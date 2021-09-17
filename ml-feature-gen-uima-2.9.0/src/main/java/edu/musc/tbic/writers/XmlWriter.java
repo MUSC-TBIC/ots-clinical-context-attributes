@@ -88,7 +88,8 @@ public class XmlWriter extends JCasAnnotator_ImplBase {
     			SourceDocumentInformation fileLoc = (SourceDocumentInformation) it.next();
     			note_id = fileLoc.getUri().toString();
     		}
-    		if( note_id.endsWith( ".txt" ) ){
+    		if( note_id.endsWith( ".txt" ) ||
+    		        note_id.endsWith( ".xmi" ) ){
     			note_id = note_id.substring( 0 , note_id.length() - 4 );
     		}
         }

@@ -183,14 +183,59 @@ public class FeatureGen extends org.apache.uima.fit.component.JCasAnnotator_Impl
         if( pipeline_modules.contains( "Text Reader" ) ){
             ////////////////////////////////////
             // Initialize plain text reader
-            String sampleDir = "data/input";
+            String inputDir = "data/input";
             if( pipeline_properties.containsKey( "fs.in.text" ) ){
-                sampleDir = pipeline_properties.getProperty( "fs.in.text" );
+                inputDir = pipeline_properties.getProperty( "fs.in.text" );
             }
-            mLogger.info( "Loading module 'Text Reader' for " + sampleDir );
+            mLogger.info( "Loading module 'Text Reader' for " + inputDir );
             collectionReader = CollectionReaderFactory.createReaderDescription(
                     FileSystemCollectionReader.class ,
-                    FileSystemCollectionReader.PARAM_INPUTDIR , sampleDir );
+                    FileSystemCollectionReader.PARAM_INPUTDIR , inputDir );
+        } else if( pipeline_modules.contains( "WebAnno XMI Reader" ) ){
+            ////////////////////////////////////
+            // Initialize WebAnno CAS XMI reader
+            String inputDir = "data/input";
+            if( pipeline_properties.containsKey( "fs.in.xmi" ) ){
+                inputDir = pipeline_properties.getProperty( "fs.in.xmi" );
+            }
+            mLogger.info( "Loading module 'WebAnno XMI Reader' for " + inputDir );
+            collectionReader = CollectionReaderFactory.createReaderDescription(
+                    FileSystemCollectionReader.class ,
+                    FileSystemCollectionReader.PARAM_INPUTDIR , inputDir );
+        } else if( pipeline_modules.contains( "brat Reader" ) ){
+            ////////////////////////////////////
+            // Initialize brat reader
+            String inputDir = "data/input";
+            String annDir = "data/input";
+            if( pipeline_properties.containsKey( "fs.in.text" ) ){
+                inputDir = pipeline_properties.getProperty( "fs.in.text" );
+            }
+            if( pipeline_properties.containsKey( "fs.in.ann" ) ){
+                annDir = pipeline_properties.getProperty( "fs.in.ann" );
+            }
+            mLogger.info( "Loading module 'WebAnno XMI Reader' for " + inputDir );
+            collectionReader = CollectionReaderFactory.createReaderDescription(
+                    FileSystemCollectionReader.class ,
+                    FileSystemCollectionReader.PARAM_INPUTDIR , inputDir ,
+                    FileSystemCollectionReader.PARAM_ANNOTDIR , annDir ,
+                    FileSystemCollectionReader.PARAM_ANNOTSUFFIX , ".ann" );
+        } else if( pipeline_modules.contains( "ast Reader" ) ){
+            ////////////////////////////////////
+            // Initialize brat reader
+            String inputDir = "data/input";
+            String astDir = "data/input";
+            if( pipeline_properties.containsKey( "fs.in.text" ) ){
+                inputDir = pipeline_properties.getProperty( "fs.in.text" );
+            }
+            if( pipeline_properties.containsKey( "fs.in.ast" ) ){
+                astDir = pipeline_properties.getProperty( "fs.in.ast" );
+            }
+            mLogger.info( "Loading module 'WebAnno XMI Reader' for " + inputDir );
+            collectionReader = CollectionReaderFactory.createReaderDescription(
+                    FileSystemCollectionReader.class ,
+                    FileSystemCollectionReader.PARAM_INPUTDIR , inputDir ,
+                    FileSystemCollectionReader.PARAM_ANNOTDIR , astDir ,
+                    FileSystemCollectionReader.PARAM_ANNOTSUFFIX , ".ast" );
         }
         
         ///////////////////////////////////////////////////
