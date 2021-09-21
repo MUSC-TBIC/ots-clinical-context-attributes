@@ -495,7 +495,14 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
                         ") exceeds the sentence end (" + Integer.toString( sents.get(cSI - 1).getEnd() ) + ")" );
             }
 
-            int oTn = tokMap.get(sents.get(sI - 1).getBegin());
+            // TODO - this is a quick fix that needs to be made more robust with
+            // an explicit log message explaining why the gap exists
+            Integer sentenceBeginOffset = sents.get( sI - 1 ).getBegin();
+            while( sentenceBeginOffset > 0 &&
+                    ! tokMap.containsKey( sentenceBeginOffset ) ){
+                sentenceBeginOffset--;
+            }
+            int oTn = tokMap.get( sentenceBeginOffset );
             int cTs = tokMap.get(ba) - oTn;
             int cTe = tokMap.get(ea) - oTn;
 

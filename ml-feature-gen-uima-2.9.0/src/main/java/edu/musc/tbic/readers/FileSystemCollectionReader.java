@@ -274,9 +274,12 @@ public class FileSystemCollectionReader extends CollectionReader_ImplBase {
                                     txtFilename.length() - mAnnotationSuffix.length() ) + mAnnotationSuffix );
                     Reader fileReader = new FileReader( annotationFile );
                     CSVParser astParser = CSVParser.parse( fileReader , 
-                            CSVFormat.DEFAULT.withDelimiter( '\t' ).withHeader( "id" , 
-                                    "secondCol" , 
-                                    "thirdCol" ) );
+                            CSVFormat.DEFAULT
+                                .withDelimiter( '\t' )
+                                .withQuote( null )
+                                .withHeader( "id" , 
+                                             "secondCol" , 
+                                             "thirdCol" ) );
                     Iterator<CSVRecord> recordIterator = astParser.iterator();
                     while( recordIterator.hasNext() ){
                         CSVRecord astRecord = recordIterator.next();
@@ -480,7 +483,6 @@ public class FileSystemCollectionReader extends CollectionReader_ImplBase {
                 return;
             }
 
-            //System.out.println("Root element :" + document.getDocumentElement().getNodeName());
             NodeList nList = document.getElementsByTagName("cas:Sofa");
             if( nList.getLength() > 1 ){
                 System.err.println( "Warning:  More than one <cas:Sofa> element detected. "

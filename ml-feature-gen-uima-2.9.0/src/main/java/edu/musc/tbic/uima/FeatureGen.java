@@ -213,7 +213,7 @@ public class FeatureGen extends org.apache.uima.fit.component.JCasAnnotator_Impl
             if( pipeline_properties.containsKey( "fs.in.ann" ) ){
                 annDir = pipeline_properties.getProperty( "fs.in.ann" );
             }
-            mLogger.info( "Loading module 'WebAnno XMI Reader' for " + inputDir );
+            mLogger.info( "Loading module 'brat Reader' for " + inputDir );
             collectionReader = CollectionReaderFactory.createReaderDescription(
                     FileSystemCollectionReader.class ,
                     FileSystemCollectionReader.PARAM_INPUTDIR , inputDir ,
@@ -230,7 +230,7 @@ public class FeatureGen extends org.apache.uima.fit.component.JCasAnnotator_Impl
             if( pipeline_properties.containsKey( "fs.in.ast" ) ){
                 astDir = pipeline_properties.getProperty( "fs.in.ast" );
             }
-            mLogger.info( "Loading module 'WebAnno XMI Reader' for " + inputDir );
+            mLogger.info( "Loading module 'ast Reader' for " + inputDir );
             collectionReader = CollectionReaderFactory.createReaderDescription(
                     FileSystemCollectionReader.class ,
                     FileSystemCollectionReader.PARAM_INPUTDIR , inputDir ,
