@@ -266,7 +266,115 @@ public class FileSystemCollectionReader extends CollectionReader_ImplBase {
             if( mAnnotationDirectory != null ){
                 if( mAnnotationSuffix.equals( ".ann" ) ||
                         mAnnotationSuffix.equals( "ann" ) ){
-                    mLogger.debug( "Skipping brat files" );
+                    HashMap<String, ArrayList<Integer>> annotationMap = new HashMap<>();
+                    HashMap<String, ArrayList<String>> attributeMap = new HashMap<>();
+                    String txtFilename = file.getName();
+                    File annotationFile = new File( mAnnotationDirectory , 
+                            txtFilename.substring( 0 ,
+                                    txtFilename.length() - mAnnotationSuffix.length() ) + mAnnotationSuffix );
+                    Reader fileReader = new FileReader( annotationFile );
+                    CSVParser astParser = CSVParser.parse( fileReader , 
+                            CSVFormat.DEFAULT.withDelimiter( '\t' ).withHeader( "id" , 
+                                    "secondCol" , 
+                                    "thirdCol" ) );
+                    Iterator<CSVRecord> recordIterator = astParser.iterator();
+                    while( recordIterator.hasNext() ){
+                        CSVRecord astRecord = recordIterator.next();
+                        String conceptId = astRecord.get( "id" );
+                        // Skip all the non-text span and non-attribute entries
+                        if( conceptId.startsWith( "T" ) ) {
+                            String conceptTypeOffset = astRecord.get( "secondCol" );
+                            Pattern offsetPattern = Pattern.compile( "(.*) ([0-9]+) ([0-9]+)(;([0-9]+) ([0-9]+))*$" );
+                            Matcher matcher = offsetPattern.matcher( conceptTypeOffset );
+                            String conceptType = "";
+                            int beginOffset = -1;
+                            int endOffset = -1;
+                            if( matcher.find() ) {
+                                conceptType = matcher.group( 1 );
+                                if( conceptType.equalsIgnoreCase( "Problem" ) ){
+                                    if( annotationMap.get( conceptId ) == null) {
+                                        annotationMap.put( conceptId , new ArrayList<Integer>() );
+                                        beginOffset = Integer.parseInt( matcher.group( 2 ) );
+                                        endOffset = Integer.parseInt( matcher.group( 3 ) );
+                                        annotationMap.get( conceptId ).add( beginOffset );
+                                        annotationMap.get( conceptId ).add( endOffset );
+                                        if( matcher.group( 6 ) != null ){
+                                            // TODO - we'll preserve the discontinuous annotation spans
+                                            // until later even through we don't technically process them.
+                                            // 0 5;13 23 is treated as the continuous span 0 23
+                                            beginOffset = Integer.parseInt( matcher.group( 5 ) );
+                                            endOffset = Integer.parseInt( matcher.group( 6 ) );
+                                            annotationMap.get( conceptId ).add( beginOffset );
+                                            annotationMap.get( conceptId ).add( endOffset );
+                                        }
+                                    } else {
+                                        mLogger.warn( "Annotation span " + conceptId + " is listed twice. Skipping second entry." );
+                                    }
+                                }
+                            }
+                        } else if( conceptId.startsWith( "A" ) ){
+                            String conceptAttributeId = astRecord.get( "secondCol" );
+                            Pattern attributePattern = Pattern.compile( "(.*) ([TRE][0-9]+)( (.*))?$" );
+                            Matcher matcher = attributePattern.matcher( conceptAttributeId );
+                            String conceptAttribute = "";
+                            String spanId = "";
+                            if( matcher.find() ) {
+                                conceptAttribute = matcher.group( 1 );
+                                spanId = matcher.group( 2 );
+                                // TODO - allow this list of attributes to be provided via a config file
+                                if( spanId.startsWith( "T" ) &&
+                                    ( conceptAttribute.equalsIgnoreCase( "Conditional" ) ||
+                                      conceptAttribute.equalsIgnoreCase( "Generic" ) ||
+                                      conceptAttribute.equalsIgnoreCase( "Historical" ) ||
+                                      conceptAttribute.equalsIgnoreCase( "Negated" ) ||
+                                      conceptAttribute.equalsIgnoreCase( "NotPatient" ) ||
+                                      conceptAttribute.equalsIgnoreCase( "Uncertain" ) ) ){
+                                    if( attributeMap.get( spanId ) == null) {
+                                        attributeMap.put( spanId , new ArrayList<String>() );
+                                    }
+                                    attributeMap.get( spanId ).add( conceptAttribute );
+                                }
+                            }
+                        }
+                    }
+                    for( HashMap.Entry<String, ArrayList<Integer>> annotationInstance :
+                         annotationMap.entrySet() ) {
+                        String spanId = annotationInstance.getKey();
+                        ArrayList<Integer> offsetList = annotationInstance.getValue();
+                        Integer beginOffset = offsetList.get( 0 );
+                        Integer endOffset = offsetList.get( offsetList.size() - 1 );
+                        IdentifiedAnnotation iaConcept = new IdentifiedAnnotation( jcas ,
+                                beginOffset ,
+                                endOffset );
+                        iaConcept.setPolarity( 1 );
+                        iaConcept.setSubject( "patient" );
+                        iaConcept.setConditional( false );
+                        iaConcept.setGeneric( false );
+                        iaConcept.setHistoryOf( 0 );
+                        iaConcept.setUncertainty( 0 );
+                        if( attributeMap.get( spanId ) != null) {
+                            ArrayList<String> attributeList = attributeMap.get( spanId );
+                            for( int i = 0 ; i < attributeList.size(); i++ ){
+                                String attributeFlag = attributeList.get( i );
+                                if( attributeFlag.equalsIgnoreCase( "Conditional" ) ){
+                                    iaConcept.setConditional( true );
+                                } else if( attributeFlag.equalsIgnoreCase( "Generic" ) ){
+                                  iaConcept.setGeneric( true );
+                                } else if( attributeFlag.equalsIgnoreCase( "Historical" ) ){
+                                  iaConcept.setHistoryOf( 1 );
+                                } else if( attributeFlag.equalsIgnoreCase( "Negated" ) ){
+                                    iaConcept.setPolarity( -1 );
+                                } else if( attributeFlag.equalsIgnoreCase( "NotPatient" ) ){
+                                    iaConcept.setSubject( "not patient" );
+                                } else if( attributeFlag.equalsIgnoreCase( "Uncertain" ) ){
+                                    iaConcept.setUncertainty( 1 );
+                                } else {
+                                    mLogger.warn( "Unrecognized attribute flag: " + attributeFlag );
+                                }
+                            }
+                        }
+                        iaConcept.addToIndexes();
+                    }
                 } else if( mAnnotationSuffix.equals( ".ast" ) ||
                         mAnnotationSuffix.equals( "ast" ) ){
                     String lines[] = text.split("\\n");
