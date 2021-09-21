@@ -340,7 +340,9 @@ public class FileSystemCollectionReader extends CollectionReader_ImplBase {
                         iaConcept.setPolarity( 1 );
                         iaConcept.setSubject( "patient" );
                         iaConcept.setConditional( false );
-                        iaConcept.setUncertainty( 1 );
+                        iaConcept.setGeneric( false );
+                        iaConcept.setHistoryOf( 0 );
+                        iaConcept.setUncertainty( 0 );
                         if( conceptAssertion.equalsIgnoreCase( "a=\"present\"" ) ){
                             iaConcept.setPolarity( 1 );
                         } else if( conceptAssertion.equalsIgnoreCase( "a=\"absent\"" ) ){
@@ -350,9 +352,9 @@ public class FileSystemCollectionReader extends CollectionReader_ImplBase {
                         } else if( conceptAssertion.equalsIgnoreCase( "a=\"conditional\"" ) ){
                             iaConcept.setConditional( true );
                         } else if( conceptAssertion.equalsIgnoreCase( "a=\"possible\"" ) ){
-                            iaConcept.setUncertainty( -1 );
+                            iaConcept.setUncertainty( 1 );
                         } else if( conceptAssertion.equalsIgnoreCase( "a=\"hypothetical\"" ) ){
-                            iaConcept.setUncertainty( -1 );
+                            iaConcept.setUncertainty( 1 );
                         } else {
                             mLogger.warn( "Unrecognized assertion value: " + conceptAssertion );
                         }
@@ -393,18 +395,38 @@ public class FileSystemCollectionReader extends CollectionReader_ImplBase {
                     Element eElement = (Element) problemNode;
                     int beginOffset = Integer.parseInt( eElement.getAttribute( "begin" ) );
                     int endOffset = Integer.parseInt( eElement.getAttribute( "end" ) );
-                    String negatedStatus = eElement.getAttribute( "negated" );
                     IdentifiedAnnotation iaConcept = new IdentifiedAnnotation( jcas ,
                             beginOffset ,
                             endOffset );
                     iaConcept.setPolarity( 1 );
                     iaConcept.setSubject( "patient" );
                     iaConcept.setConditional( false );
-                    iaConcept.setUncertainty( 1 );
-                    if( negatedStatus.equalsIgnoreCase( "false" ) ){
-                        iaConcept.setPolarity( 1 );
-                    } else if( negatedStatus.equalsIgnoreCase( "true" ) ){
+                    iaConcept.setGeneric( false );
+                    iaConcept.setHistoryOf( 0 );
+                    iaConcept.setUncertainty( 0 );
+                    String conditionalStatus = eElement.getAttribute( "conditional" );
+                    String genericStatus = eElement.getAttribute( "generic" );
+                    String historicalStatus = eElement.getAttribute( "historical" );
+                    String negatedStatus = eElement.getAttribute( "negated" );
+                    String notPatientStatus = eElement.getAttribute( "not_patient" );
+                    String uncertainStatus = eElement.getAttribute( "uncertain" );
+                    if( conditionalStatus.equalsIgnoreCase( "true" ) ){
+                        iaConcept.setConditional( true );
+                    }
+                    if( genericStatus.equalsIgnoreCase( "true" ) ){
+                        iaConcept.setGeneric( true );
+                    }
+                    if( historicalStatus.equalsIgnoreCase( "true" ) ){
+                        iaConcept.setHistoryOf( 1 );
+                    }
+                    if( negatedStatus.equalsIgnoreCase( "true" ) ){
                         iaConcept.setPolarity( -1 );
+                    }
+                    if( notPatientStatus.equalsIgnoreCase( "true" ) ){
+                        iaConcept.setSubject( "not patient" );
+                    }
+                    if( uncertainStatus.equalsIgnoreCase( "true" ) ){
+                        iaConcept.setUncertainty( 1 );
                     }
                     iaConcept.addToIndexes();
                 }
