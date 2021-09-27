@@ -1,0 +1,6 @@
+present 1
+absent 2
+possible 3
+conditional 4
+hypothetical 5
+associated_with_someone_else 6
