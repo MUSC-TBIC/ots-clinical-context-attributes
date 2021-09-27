@@ -284,10 +284,19 @@ public class FeatureGen extends org.apache.uima.fit.component.JCasAnnotator_Impl
         ///////////////////////////////////////////////////
         if( pipeline_modules.contains( "Context Attributes" ) ){
             mLogger.info( "Loading Context Attributes Feature Generator" );
+            // Feature output directory and filename
+            String outputFeatureDir = "data/test/out/tsv";
+            String outputFeatureFilename = "defaultFeatures";
+            if( pipeline_properties.containsKey( "fs.out.features.dir" ) ){
+                outputFeatureDir = pipeline_properties.getProperty( "fs.out.features.dir" );
+            }
+            if( pipeline_properties.containsKey( "fs.out.features.file" ) ){
+                outputFeatureFilename = pipeline_properties.getProperty( "fs.out.features.file" );
+            }
             AnalysisEngineDescription alAttrFeatureGen = AnalysisEngineFactory.createEngineDescription(
                     AlAttrFeatureGen.class ,
-                    AlAttrFeatureGen.PARAM_OUTPUTDIR , "data/test/out/tsv" ,
-                    AlAttrFeatureGen.PARAM_FVFILE , "defaultFeatures"  );
+                    AlAttrFeatureGen.PARAM_OUTPUTDIR , outputFeatureDir ,
+                    AlAttrFeatureGen.PARAM_FVFILE , outputFeatureFilename  );
             builder.add( alAttrFeatureGen );
         }
         
