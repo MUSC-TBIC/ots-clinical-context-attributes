@@ -451,8 +451,19 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             int e = c.getEnd();
 
             String label = note_id + " " + b + " " + e;
-            // TODO - dig up original edu.musc.ce.Concept type and figure out how attr is defined
-            String attr = Integer.toString( c.getPolarity() ); // TODO - c.getAttr();
+            // TODO - dig up original edu.musc.ce.type.Concept type and figure out how attr is defined
+            String attr = "present"; // TODO - c.getAttr();
+            if( c.getSubject().equalsIgnoreCase( "not patient" ) ){
+                attr = "not_patient";
+            } else if( c.getPolarity() == -1 ){
+                attr = "negated";
+            } else if( c.getUncertainty() == 1 ){
+                attr = "uncertain";
+            } else if( c.getConditional() ){
+                attr = "conditional";
+            } else if( c.getHistoryOf() == 1 ){
+                attr = "hypothetical";
+            }
 
             String w = getLists(aJCas, c, "w"); // word
             String p = getLists(aJCas, c, "p"); // pos

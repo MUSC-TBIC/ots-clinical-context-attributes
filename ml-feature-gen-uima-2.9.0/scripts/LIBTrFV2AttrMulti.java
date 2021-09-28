@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.TreeMap;
@@ -111,7 +112,11 @@ public class LIBTrFV2AttrMulti {
                 txtin = new BufferedReader(new FileReader(file));
                 while ((str = txtin.readLine()) != null) {
                     String strA[] = str.split(" ");
-                    map.put(strA[0], strA[1]);
+                    //map.put(strA[0], strA[1]);
+                    // File:  present 1
+                    // Map:   [ "present" ] -> "1"
+                    map.put( strA[ 0 ] , strA[ 1 ] );
+                    //System.out.println( "Class " + strA[ 0 ] + " -> " + strA[ 1 ] );
                 }
 
             } catch (Exception ex) {
@@ -140,7 +145,12 @@ public class LIBTrFV2AttrMulti {
                 lbl = classM.get(lbl);
             } else {
                 System.out.println("class label not contains !!! " + lbl);
-            }            
+                for( Map.Entry<String, String> set :
+                         classM.entrySet() ) {
+                    System.out.println( "\tClass " + set.getKey() + " -> "
+                                        + set.getValue() );
+                }
+            }
             
             String data = strA[1].trim();
 
@@ -193,7 +203,12 @@ public class LIBTrFV2AttrMulti {
                 lbl = classM.get(lbl);
             } else {
                 System.out.println("class label not contains !!! " + lbl);
-            }            
+                for( Map.Entry<String, String> set :
+                         classM.entrySet() ) {
+                    System.out.println( "\tClass " + set.getKey() + " -> "
+                                        + set.getValue() );
+                }
+            }
             
             String data = strA[1].trim();
 
@@ -208,16 +223,16 @@ public class LIBTrFV2AttrMulti {
                     continue;
                 }
                 
-                if (bowCnt.get(tok) < cutoff) { // 1 : equal or more than 1 
+                if (bowCnt.get(tok) < cutoff) { // 1 : equal or more than 1
                     //iSet.add(bowMap.get("unk_" + tokH));
                     
                     //iSet.add(bowMap.get("unk"));
                 } else {
-                    iSet.add(bowMap.get(tok));                    
+                    iSet.add(bowMap.get(tok));
                 } 
 
                 // to keep features < cutoff
-                //iSet.add(bowMap.get(tok));                    
+                //iSet.add(bowMap.get(tok));
                 
             }
 
@@ -283,7 +298,7 @@ public class LIBTrFV2AttrMulti {
                         if (!unkSet.contains(tokA[0])) {
                             unkSet.add("unk_" + tokA[0]);
                         }
-                        /* */        
+                        /* */
                     }
                 }
                 /* */
@@ -415,12 +430,12 @@ public class LIBTrFV2AttrMulti {
                     }
                 } else {
                     out.println(key + "||" + bowMap.get(key));                    
-                } 
+                }
                 */
 
-                // keep all feature 
-                out.println(key + "||" + bowMap.get(key));                    
-                        
+                // keep all feature
+                out.println(key + "||" + bowMap.get(key));
+                
             }
             out.flush();
             out.close();

@@ -329,9 +329,13 @@ public class FileSystemCollectionReader extends CollectionReader_ImplBase {
                                     ( conceptAttribute.equalsIgnoreCase( "Conditional" ) ||
                                       conceptAttribute.equalsIgnoreCase( "Generic" ) ||
                                       conceptAttribute.equalsIgnoreCase( "Historical" ) ||
+                                      conceptAttribute.equalsIgnoreCase( "hypothetical" ) ||
                                       conceptAttribute.equalsIgnoreCase( "Negated" ) ||
+                                      conceptAttribute.equalsIgnoreCase( "absent" ) ||
                                       conceptAttribute.equalsIgnoreCase( "NotPatient" ) ||
-                                      conceptAttribute.equalsIgnoreCase( "Uncertain" ) ) ){
+                                      conceptAttribute.equalsIgnoreCase( "associated_with_someone_else" ) ||
+                                      conceptAttribute.equalsIgnoreCase( "Uncertain" ) ||
+                                      conceptAttribute.equalsIgnoreCase( "possible" ) ) ){
                                     if( attributeMap.get( spanId ) == null) {
                                         attributeMap.put( spanId , new ArrayList<String>() );
                                     }
@@ -364,12 +368,17 @@ public class FileSystemCollectionReader extends CollectionReader_ImplBase {
                                 } else if( attributeFlag.equalsIgnoreCase( "Generic" ) ){
                                   iaConcept.setGeneric( true );
                                 } else if( attributeFlag.equalsIgnoreCase( "Historical" ) ){
-                                  iaConcept.setHistoryOf( 1 );
-                                } else if( attributeFlag.equalsIgnoreCase( "Negated" ) ){
+                                    iaConcept.setHistoryOf( -1 );
+                                } else if( attributeFlag.equalsIgnoreCase( "hypothetical" ) ){
+                                    iaConcept.setHistoryOf( 1 );
+                                } else if( attributeFlag.equalsIgnoreCase( "Negated" ) ||
+                                           attributeFlag.equalsIgnoreCase( "absent" ) ){
                                     iaConcept.setPolarity( -1 );
-                                } else if( attributeFlag.equalsIgnoreCase( "NotPatient" ) ){
+                                } else if( attributeFlag.equalsIgnoreCase( "NotPatient" ) ||
+                                           attributeFlag.equalsIgnoreCase( "associated_with_someone_else" ) ){
                                     iaConcept.setSubject( "not patient" );
-                                } else if( attributeFlag.equalsIgnoreCase( "Uncertain" ) ){
+                                } else if( attributeFlag.equalsIgnoreCase( "Uncertain" ) ||
+                                           attributeFlag.equalsIgnoreCase( "possible" ) ){
                                     iaConcept.setUncertainty( 1 );
                                 } else {
                                     mLogger.warn( "Unrecognized attribute flag: " + attributeFlag );
@@ -465,7 +474,7 @@ public class FileSystemCollectionReader extends CollectionReader_ImplBase {
                         } else if( conceptAssertion.equalsIgnoreCase( "a=\"possible\"" ) ){
                             iaConcept.setUncertainty( 1 );
                         } else if( conceptAssertion.equalsIgnoreCase( "a=\"hypothetical\"" ) ){
-                            iaConcept.setUncertainty( 1 );
+                            iaConcept.setHistoryOf( 1 );
                         } else {
                             mLogger.warn( "Unrecognized assertion value: " + conceptAssertion );
                         }

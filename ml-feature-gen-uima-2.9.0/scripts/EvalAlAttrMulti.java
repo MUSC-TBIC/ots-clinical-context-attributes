@@ -27,6 +27,13 @@ public class EvalAlAttrMulti {
         String refDir = args[0];
         String ansDir = args[1];
 
+        if( !refDir.endsWith("/") ) {
+            refDir += "/";
+        }
+        if (!ansDir.endsWith("/")) {
+            ansDir += "/";
+        }
+        
         ArrayList<String> refFileList = new ArrayList<String>();
         listFile(refDir, refFileList, "ann");
         
@@ -34,7 +41,7 @@ public class EvalAlAttrMulti {
         HashSet<String> ans = new HashSet<String>();
         
         for (String fileName : refFileList) {
-            readCons(refDir, fileName, ref);                
+            readCons(refDir, fileName, ref);
             readCons(ansDir, fileName, ans);
         }
         
@@ -51,13 +58,13 @@ public class EvalAlAttrMulti {
         HashSet<String> ans = new HashSet<String>();
         
         for (String fileName : refFileList) {
-            readCons(refDir, fileName, ref);                
+            readCons(refDir, fileName, ref);
             readCons(ansDir, fileName, ans);
         }
         
         setData(ref, ans);
         
-    }    
+    }
 
     public static void readCons(String inDir, String fileName, HashSet<String> outs) {
         
@@ -74,9 +81,9 @@ public class EvalAlAttrMulti {
             BufferedReader txtin = null;
             try {
                 txtin = new BufferedReader(new FileReader(inDir + fileName));
-                //T1	Drug 705 714	laryngeal
+                //T1    Drug 705 714    laryngeal
                 while ((str = txtin.readLine()) != null) {
-                    ins.add(str);                        
+                    ins.add(str);
                 }
             } catch (Exception ex) {
                 ex.printStackTrace();
@@ -91,28 +98,28 @@ public class EvalAlAttrMulti {
         
         HashMap<String, String> cMap = new HashMap<>();
         for (String in : ins) {
-            //T1	problem 506 520	l shoulder inj
+            //T1        problem 506 520 l shoulder inj
 
             if (in.startsWith("T")) {
-		String cA[] = in.split("\t", 3);
-		String id = cA[0];
-				
-		String cAA[] = cA[1].split(" ", 3);
-		int b = Integer.parseInt(cAA[1]);
-		int e = Integer.parseInt(cAA[2]);
+                String cA[] = in.split("\t", 3);
+                String id = cA[0];
+                
+                String cAA[] = cA[1].split(" ", 3);
+                int b = Integer.parseInt(cAA[1]);
+                int e = Integer.parseInt(cAA[2]);
 
-		cMap.put(id, b + " " + e);
+                cMap.put(id, b + " " + e);
             }
         }
 
         for (String in : ins) {
-            //A4	NotPatient T9
+            //A4        NotPatient T9
 
             if (in.startsWith("A")) {
-		String cA[] = in.split("\t", 2);
-				
-		String cAA[] = cA[1].split(" ", 2);
-		String id = cAA[1];
+                String cA[] = in.split("\t", 2);
+                
+                String cAA[] = cA[1].split(" ", 2);
+                String id = cAA[1];
                 String attr = cAA[0];
                 
                 if (cMap.containsKey(id)) {
@@ -151,7 +158,7 @@ public class EvalAlAttrMulti {
             updateMap(ansNum, tmp);
         }
         
-        for (String k : ref) {            
+        for (String k : ref) {
             if (ans.contains(k)) {
                 updateMap(corNum, "All");
                 updateMap(corNum, k.split(" ")[3]);
@@ -190,8 +197,8 @@ public class EvalAlAttrMulti {
             }
         }
         
-        mR /= mCnt; 
-        mP /= mCnt; 
+        mR /= mCnt;
+        mP /= mCnt;
         if (mP + mR == 0) {
             mF = 0;
         } else {

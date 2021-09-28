@@ -33,6 +33,9 @@ public class AttrOutputAlMulti {
         
         String cFile = args[5];
 
+        if( !refDir.endsWith("/") ) {
+            refDir += "/";
+        }
         if (!ansDir.endsWith("/")) {
             ansDir += "/";
         }
@@ -44,7 +47,7 @@ public class AttrOutputAlMulti {
         readLbls(lblFile, lbls);
         HashMap<String, HashMap<String, String>> fOuts = new HashMap<>();
         
-        readPr(prFile, lbls, fOuts, mode);            
+        readPr(prFile, lbls, fOuts, mode);
         
         ArrayList<String> refFileList = new ArrayList<String>();
         listFile(refDir, refFileList, "ann");
@@ -53,14 +56,19 @@ public class AttrOutputAlMulti {
             ArrayList<String> out = new ArrayList<>();
             
             int aI = 1;
-            readRefCons(refDir, fileName, out);                
-            String fN = fileName.replace(".ann", ".txt");            
+            readRefCons(refDir, fileName, out);
+            String fN = fileName.replace(".ann", ".txt");
+            String fNWithoutSuffix = fileName.replace(".ann", "");
             ArrayList<String> tmp = new ArrayList<>();
             if (fOuts.containsKey(fN)) {
-                addAttr(out, tmp, fOuts.get(fN), classM, aI);
-                out.addAll(tmp);
+                addAttr( out , tmp , fOuts.get( fN ) , classM , aI );
+                out.addAll( tmp );
+            } else if( fOuts.containsKey( fNWithoutSuffix ) ) {
+                addAttr( out , tmp , fOuts.get( fNWithoutSuffix ) , classM , aI );
+                out.addAll( tmp );
             }
-            writeFile(ansDir + fileName, out);        
+
+            writeFile(ansDir + fileName, out);
         }
         
     }
@@ -95,20 +103,20 @@ public class AttrOutputAlMulti {
     private static void addAttr(ArrayList<String> out, ArrayList<String> tmp, HashMap<String, String> attrs, 
         HashMap<String, String> classM, int aI) {
     
-	HashMap<String, String> cMap = new HashMap<>();
-	
+        HashMap<String, String> cMap = new HashMap<>();
+        
         for (String str : out) {
-            //T1	problem 506 520	l shoulder inj
+            //T1        problem 506 520         l shoulder inj
 
             if (str.startsWith("T")) {
-		String cA[] = str.split("\t", 3);
-		String id = cA[0];
-				
-		String cAA[] = cA[1].split(" ", 3);
-		int b = Integer.parseInt(cAA[1]);
-		int e = Integer.parseInt(cAA[2]);
+                String cA[] = str.split("\t", 3);
+                String id = cA[0];
+                
+                String cAA[] = cA[1].split(" ", 3);
+                int b = Integer.parseInt(cAA[1]);
+                int e = Integer.parseInt(cAA[2]);
 
-		cMap.put(b + " " + e, id);
+                cMap.put(b + " " + e, id);
             }
         }
 
@@ -116,10 +124,10 @@ public class AttrOutputAlMulti {
             // span check
             if (attrs.containsKey(span)) {
                 String cLbl = classM.get(attrs.get(span));
-                //A4	NotPatient T9
+                //A4    NotPatient T9
                 tmp.add("A" + aI + "\t" + cLbl + " " + cMap.get(span));
                 aI++;
-            }            
+            }
         }
         
     }
@@ -146,7 +154,7 @@ public class AttrOutputAlMulti {
                }
             }
         }
-    }    
+    }
     
     public static void readPr(String file, ArrayList<String> lbls, HashMap<String, HashMap<String, String>> map, String mode) {
 
@@ -197,11 +205,11 @@ public class AttrOutputAlMulti {
                }
             }
         }
-    }    
+    }
     
     public static void listFile(String dirName, ArrayList<String> fileList, String ext) {
         File dir = new File(dirName);
-
+        
         String[] children = dir.list();
         if (children == null) {
             return;
@@ -224,12 +232,12 @@ public class AttrOutputAlMulti {
             BufferedReader txtin = null;
             try {
                 txtin = new BufferedReader(new FileReader(inDir + fileName));
-                //T1	Drug 705 714	laryngeal
+                //T1    Drug 705 714    laryngeal
                 while ((str = txtin.readLine()) != null) {
                     if (!(str.startsWith("T") || str.startsWith("N"))) {
                         continue;
                     }
-                    outs.add(str);                        
+                    outs.add(str);
                 }
             } catch (Exception ex) {
                 ex.printStackTrace();
@@ -252,9 +260,9 @@ public class AttrOutputAlMulti {
             BufferedReader txtin = null;
             try {
                 txtin = new BufferedReader(new FileReader(inDir + fileName));
-                //T1	Drug 705 714	laryngeal
+                //T1    Drug 705 714    laryngeal
                 while ((str = txtin.readLine()) != null) {
-                    outs.add(str);                        
+                    outs.add(str);
                     if (str.startsWith("A")) {
                         int tAI = Integer.parseInt(str.split("\t", 2)[0].replace("A", ""));
                         if (tAI > aI) {
