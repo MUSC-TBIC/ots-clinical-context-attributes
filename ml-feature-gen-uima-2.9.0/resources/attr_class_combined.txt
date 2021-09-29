@@ -1,0 +1,6 @@
+present 1
+negated 2
+uncertain 3
+conditional 4
+hypothetical 5
+not_patient 6
