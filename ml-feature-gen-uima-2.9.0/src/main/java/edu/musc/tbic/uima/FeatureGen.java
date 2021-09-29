@@ -293,10 +293,25 @@ public class FeatureGen extends org.apache.uima.fit.component.JCasAnnotator_Impl
             if( pipeline_properties.containsKey( "fs.out.features.file" ) ){
                 outputFeatureFilename = pipeline_properties.getProperty( "fs.out.features.file" );
             }
+            String modelFile = "";
+            String classMap = "";
+            String bowMap = "";
+            if( pipeline_properties.containsKey( "fs.liblinear.model" ) ){
+                modelFile = pipeline_properties.getProperty( "fs.liblinear.model" );
+            }
+            if( pipeline_properties.containsKey( "fs.liblinear.classmap" ) ){
+                classMap = pipeline_properties.getProperty( "fs.liblinear.classmap" );
+            }
+            if( pipeline_properties.containsKey( "fs.liblinear.bowmap" ) ){
+                bowMap = pipeline_properties.getProperty( "fs.liblinear.bowmap" );
+            }
             AnalysisEngineDescription alAttrFeatureGen = AnalysisEngineFactory.createEngineDescription(
                     AlAttrFeatureGen.class ,
                     AlAttrFeatureGen.PARAM_OUTPUTDIR , outputFeatureDir ,
-                    AlAttrFeatureGen.PARAM_FVFILE , outputFeatureFilename  );
+                    AlAttrFeatureGen.PARAM_FVFILE , outputFeatureFilename ,
+                    AlAttrFeatureGen.PARAM_MODELFILE , modelFile ,
+                    AlAttrFeatureGen.PARAM_CLASSMAP , classMap ,
+                    AlAttrFeatureGen.PARAM_BOWMAP , bowMap );
             builder.add( alAttrFeatureGen );
         }
         

@@ -1,13 +1,18 @@
 package edu.musc.tbic.context;
 
+import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.uima.UimaContext;
@@ -23,8 +28,16 @@ import org.apache.uima.resource.ResourceProcessException;
 import org.apache.uima.util.ProcessTrace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import de.bwaldvogel.liblinear.Feature;
+import de.bwaldvogel.liblinear.FeatureNode;
+import de.bwaldvogel.liblinear.Linear;
+import de.bwaldvogel.liblinear.Model;
+
 import org.apache.ctakes.typesystem.type.syntax.BaseToken;
 import org.apache.ctakes.typesystem.type.textsem.IdentifiedAnnotation;
+
+import edu.musc.tbic.omop_cdm.Note_Nlp_TableProperties;
 import edu.musc.tbic.omop_cdm.Note_TableProperties;
 import edu.musc.tbic.uima.FeatureGen;
 import org.apache.ctakes.typesystem.type.textspan.Sentence;
@@ -38,9 +51,24 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
     
     public static final String PARAM_OUTPUTDIR = "OutputDirectory";
     public static final String PARAM_FVFILE = "FvFile";
-
+    public static final String PARAM_BOWMAP = "BowMap";
+    
     String outputDirectoryName;
-    String fvFileName;	
+    String fvFileName;  
+    
+    public static final String PARAM_MODELFILE = "ModelFile";
+    public static final String PARAM_CLASSMAP = "ClassMap";
+
+    Path mModelFile;
+    static String mClassMap;
+    String mBowMapFilename;
+    TreeMap<String, Integer> mBowMap;
+    HashSet<String> mFeatureSet;
+
+    static HashMap<String, String> mClassHashMapIndex2Str;
+    static HashMap<String, String> mClassHashMapStr2Index;
+
+    Model mModel;
 
     ArrayList<HashMap<String, String>> fvs;
     TreeSet<String> prefix;
@@ -52,6 +80,8 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
     int sub = 3;
 
     long ctxTime = 0;
+    
+    int [][] mConfusionMatrix;
 
     public void initialize( UimaContext context ) throws ResourceInitializationException 
     {
@@ -64,18 +94,113 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             throw new ResourceInitializationException(
                     new Exception("Parameter setting 'OutputDirectory' does not point to an existing directory."));
 
-//        try {
-//            PrintStream out = new PrintStream(new FileOutputStream(outputDirectoryName + "/" + fvFileName));
-//        } catch (FileNotFoundException e) {
-//            // TODO Auto-generated catch block
-//            e.printStackTrace();
-//        }
-
         fvs = new ArrayList<HashMap<String, String>>();
         //	// Original source:
         //	//   - https://github.com/jianlins/FastContext/blob/master/conf/context.txt
         //        //fc = new FastContext("/Users/jun/Documents/work/project/FastContext/context.txt", false);
         //        fc = new FastContext( "../fastcontext_uima_2.9.0/resources/context.txt", false);
+
+        mModel = null;
+        mBowMap = new TreeMap<String, Integer>();
+        mClassHashMapIndex2Str = new HashMap<>();
+        mClassHashMapStr2Index = new HashMap<>();
+        if( ! ( (String) context.getConfigParameterValue(PARAM_MODELFILE) ).equals( "" ) ){
+            String modelFilename = (String) context.getConfigParameterValue(PARAM_MODELFILE);
+            mModelFile = Paths.get( modelFilename );
+            mClassMap = (String) context.getConfigParameterValue(PARAM_CLASSMAP);
+            mBowMapFilename = (String) context.getConfigParameterValue(PARAM_BOWMAP);
+                        
+            try {
+                mModel = Model.load( mModelFile );
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            
+            // TODO - load this from file
+            mFeatureSet = new HashSet<String>();
+            mFeatureSet.add( "w" );
+            mFeatureSet.add( "wB" );
+            mFeatureSet.add( "pw3" );
+            mFeatureSet.add( "nw3" );
+            mFeatureSet.add( "pw7" );
+            mFeatureSet.add( "nw7" );
+            mFeatureSet.add( "pwB3" );
+            mFeatureSet.add( "nwB3" );
+            mFeatureSet.add( "pwS" );
+            mFeatureSet.add( "nwS" );
+            mFeatureSet.add( "p" );
+            mFeatureSet.add( "pp3" );
+            mFeatureSet.add( "np3" );
+            mFeatureSet.add( "s" );
+            // TODO - add FastContext extraction back as a feature
+//            mFeatureSet.add( "neg" );
+//            mFeatureSet.add( "hyp" );
+//            mFeatureSet.add( "exp" );
+//            mFeatureSet.add( "hist" );
+            
+            
+            readClassMapFile() ;
+            readBowMap( mBowMapFilename , mBowMap );
+            
+            mConfusionMatrix = new int[ mClassHashMapIndex2Str.size() + 1 ][ mClassHashMapIndex2Str.size() + 1 ];
+        }
+    }
+
+    public static void readClassMapFile() {
+
+        String str = "";
+        {
+            BufferedReader txtin = null;
+            try {
+
+                txtin = new BufferedReader( new FileReader( mClassMap ) );
+                while ((str = txtin.readLine()) != null) {
+                    String strA[] = str.split(" ");
+                    //map.put(strA[0], strA[1]);
+                    // File:  present 1
+                    // Map:   [ "present" ] -> "1"
+                    mClassHashMapStr2Index.put( strA[ 0 ] , strA[ 1 ] );
+                    // Map:   [ "1" ] -> "present"
+                    mClassHashMapIndex2Str.put( strA[ 1 ] , strA[ 0 ] );
+                    mLogger.debug( "Class " + strA[ 0 ] + " -> " + strA[ 1 ] );
+                }
+
+            } catch (Exception ex) {
+                System.err.println(ex.getMessage());
+            } finally {
+                try {
+                    txtin.close();
+                } catch (Exception ex) {
+               }
+            }
+        }
+    }
+
+    public static void readBowMap( String file , TreeMap<String, Integer> bowMap ) {
+
+        String str = "";
+        {
+            BufferedReader txtin = null;
+            try {
+
+                txtin = new BufferedReader(new FileReader(file));
+                while ((str = txtin.readLine()) != null) {
+                    String strA[] = str.split("\\|\\|");
+                    bowMap.put(strA[0], Integer.parseInt(strA[1]));
+                }
+
+            } catch (Exception ex) {
+                System.err.println(ex.getMessage());
+            } finally {
+                try {
+                    txtin.close();
+                } catch (Exception ex) {
+               }
+            }
+        }
+        mLogger.debug( "BoW Size: " + bowMap.size() );
+
     }
 
     private void setSentMap(JCas jCas, HashMap<Integer, Integer> map, FSIterator<?> sentences, 
@@ -564,6 +689,10 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
 
 //            ctxTime += endTime - startTime; 
 
+            if( mModel != null ){
+                predict( aJCas , b , e , f );
+            }
+            
             fvs.add(f);
 
         }
@@ -579,6 +708,86 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
         }
     }
 
+    public void predict( JCas jcas , 
+                         int beginOffset , int endOffset , 
+                         HashMap<String, String> featureMap ){
+        
+        Note_Nlp_TableProperties noteNlpConcept = new Note_Nlp_TableProperties( jcas ,
+                beginOffset ,
+                endOffset );
+        
+        ArrayList<Feature> conceptFeatureList = new ArrayList<Feature>();
+        for( HashMap.Entry<String, String> thisFeature : featureMap.entrySet() ){
+            if( !mFeatureSet.contains( thisFeature.getKey() ) ){
+                continue;
+            }
+            String featureValuePair = thisFeature.getKey() + "_" + thisFeature.getValue();
+            if( mBowMap.containsKey( featureValuePair ) ){
+                // Add 1001 for sentence meta info
+                int featureKey = mBowMap.get( featureValuePair ) + 1001;
+                conceptFeatureList.add( new FeatureNode( featureKey , 1 ) );
+            }
+        }
+        
+        Feature[] conceptFeatureArray = new Feature[ conceptFeatureList.size() ];
+        for( int i = 0 ; i < conceptFeatureArray.length ; i++ ){
+            conceptFeatureArray[ i ] = conceptFeatureList.get( i );
+        }
+        //        new FeatureNode(1, 4), new FeatureNode(2, 2) };
+        int prediction = (int) Linear.predict( mModel , conceptFeatureArray );
+        String strPrediction = mClassHashMapIndex2Str.get( Integer.toString( prediction ) );
+        String referenceIndex = mClassHashMapStr2Index.get( featureMap.get( "attr" ) );
+        
+        mConfusionMatrix[ Integer.parseInt( referenceIndex ) - 1 ][ prediction - 1 ] += 1;
+
+        String conditionalValue = "false";
+        String genericValue = "false";
+        String historicalValue = "0";
+        String polarityValue = "1";
+        String subjectValue = "patient";
+        String uncertaintyValue = "0";
+        if( strPrediction.equalsIgnoreCase( "conditional" ) ){
+            conditionalValue = "true";
+        } else if( strPrediction.equalsIgnoreCase( "hypothetical" ) ){
+            historicalValue = "1";
+        } else if( strPrediction.equalsIgnoreCase( "negated" ) ){
+            polarityValue = "-1";
+        } else if( strPrediction.equalsIgnoreCase( "not_patient" ) ){
+            subjectValue = "not patient";
+        } else if( strPrediction.equalsIgnoreCase( "uncertain" ) ){
+            uncertaintyValue = "1";
+        } else if( ! strPrediction.equalsIgnoreCase( "present" ) ){
+            mLogger.warn( "Unrecognized model prediction " + 
+                          strPrediction + 
+                          " (" + Integer.toString( prediction ) + "). Treating as 'present'." );
+        }
+        // Update the term_exists flag to match
+        if( conditionalValue.equals( "false" ) &&
+            genericValue.equals( "false" ) &&
+            historicalValue.equals( "0" ) &&
+            polarityValue.equals( "1" ) &&
+            subjectValue.equals( "patient" ) &&
+            uncertaintyValue.equals( "0" ) ){
+            noteNlpConcept.setTerm_exists( "y" );
+        } else {
+            noteNlpConcept.setTerm_exists( "n" );
+        }
+        // String all the modifier values together with a semicolon
+        String termModifiers = String.join( ";" ,
+                "conditional=" + conditionalValue ,
+                "generic=" + genericValue ,
+                "historical=" + historicalValue ,
+                "polarity=" + polarityValue ,
+                "subject=" + subjectValue ,
+                "uncertainty=" + uncertaintyValue );
+        noteNlpConcept.setTerm_modifiers( termModifiers );
+
+        //mLogger.debug( "\t\tPrediction: " + strPrediction + " (" +
+        //               Integer.toString( prediction ) + ") =?= " + featureMap.get( "attr" ) ); 
+        noteNlpConcept.addToIndexes();
+        
+    }
+    
     /*
       Negation
       Certainty
@@ -887,6 +1096,38 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
         }
 
         sb.append(tmp);
+    }
+
+    public void destroy() {
+        int tp = 0;
+        int fp = 0;
+        int tn = 0;
+        int fn = 0;
+        String header = "";
+        for( int pred = 0; pred < mClassHashMapIndex2Str.size(); pred++ ){
+            String strPred = mClassHashMapIndex2Str.get( Integer.toString( pred + 1 ) );
+            header += "\t" + strPred;    
+        }
+        mLogger.debug( header );
+        for( int ref = 0; ref < mClassHashMapIndex2Str.size(); ref++ ){
+            String strRef = mClassHashMapIndex2Str.get( Integer.toString( ref + 1 ) );
+            String row = strRef;
+            for( int pred = 0; pred < mClassHashMapIndex2Str.size(); pred++ ){
+                String strPred = mClassHashMapIndex2Str.get( Integer.toString( pred + 1 ) );
+                int count = mConfusionMatrix[ ref ][ pred ];
+                row += "\t" + Integer.toString( count );
+                if( strRef.equals( strPred ) ){
+                    tp += count;
+                } else {
+                    fp += count;
+                }
+            }
+            mLogger.debug( row );
+        }
+        double accuracy = Double.valueOf( tp ) / ( Double.valueOf( tp + fp ) );
+        mLogger.info( "Match = " + Integer.toString( tp ) + 
+                      " Mismatch = " + Integer.toString( fp ) +
+                      " Accuracy = " + String.format( "%.2f" , accuracy ) );
     }
 
 }
