@@ -1,11 +1,26 @@
 fit.test_flag = true
 fit.reader = Text Reader
+##fit.reader = WebAnno XMI Reader
+##fit.reader = brat Reader
+##fit.reader = ast Reader
 fit.engines = cTAKES SBD, OpenNLP Tokenizer, Context Attributes
 fit.writers = XML Out
 
-fs.in.text = data/test/in/xmi
+fs.in.text = data/test/in/txt
+fs.in.xmi = data/test/in/xmi
+fs.in.ann = data/test/in/brat
+fs.in.ast = data/test/in/ast
+
+##fs.liblinear.model = resources/liblinear/demo_attribute.model
+##fs.liblinear.classmap = resources/attr_class_combined.txt
+##fs.liblinear.bowmap = data/test/out/features/demo_attribute_bow.txt
+
+fs.out.xmi = data/test/out/xmi_noteNlp
+fs.out.tsv = data/test/out/tsv
 
 fs.out.xmi = data/test/out/xmi
+fs.out.features.dir = data/test/out/features
+fs.out.features.file = demo_attribute_features.txt
 fs.out.tsv = 
 fs.out.note_nlp = 
 
