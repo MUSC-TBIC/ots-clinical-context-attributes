@@ -36,9 +36,12 @@ import org.apache.ctakes.core.ae.SimpleSegmentAnnotator;
 import org.apache.ctakes.core.ae.SentenceDetector;
 
 import edu.musc.tbic.context.AlAttrFeatureGen;
+import edu.musc.tbic.context.ConTextAnnotator;
+import edu.musc.tbic.context.FastContextAnnotator;
 import edu.musc.tbic.opennlp.OpenNlpTokenizer;
 
 import edu.musc.tbic.writers.XmlWriter;
+import edu.utah.bmi.nlp.context.ConText;
 
 /**
  * 
@@ -155,6 +158,8 @@ public class FeatureGen extends org.apache.uima.fit.component.JCasAnnotator_Impl
 				engine = engine.trim();
 				if( engine.equals( "cTAKES SBD" ) |
                     engine.equals( "OpenNLP Tokenizer" ) |
+                    engine.equals( "ConText" ) |
+                    engine.equals( "FastContext" ) |
                     engine.equals( "Context Attributes" ) ){
 					pipeline_modules.add( engine );
 				} else {
@@ -279,6 +284,35 @@ public class FeatureGen extends org.apache.uima.fit.component.JCasAnnotator_Impl
             builder.add( openNlpTokenizer );
         }
 
+        ////////////////////////////////////
+        // ConText
+        if( pipeline_modules.contains( "ConText" ) ){
+            mLogger.info( "Loading module 'ConText'" );
+            String context_log_file = "";
+            if( pipeline_properties.containsKey( "context.log_file" ) ){
+                context_log_file = pipeline_properties.getProperty( "context.log_file" );
+            }
+            AnalysisEngineDescription conText = AnalysisEngineFactory.createEngineDescription(
+                    ConTextAnnotator.class,
+                    ConTextAnnotator.PARAM_SENTENCETYPE, sentence_type ,
+                    ConText.PARAM_NEGEX_PHRASE_FILE , "resources/ConText_rules.txt" ,
+                    ConText.PARAM_CONTEXT_LOG , context_log_file
+                    );
+            builder.add( conText );
+        }
+
+        ///////////////////////////////////////////////////
+        // FastContext Annotator
+        ///////////////////////////////////////////////////
+        if( pipeline_modules.contains( "FastContext" ) ){
+            mLogger.info( "Loading module 'FastContext'" );
+            AnalysisEngineDescription fastContext = AnalysisEngineFactory.createEngineDescription(
+                    FastContextAnnotator.class,
+                    FastContextAnnotator.PARAM_SENTENCETYPE, sentence_type 
+                    );
+            builder.add( fastContext );
+        }
+        
         ///////////////////////////////////////////////////
         // Context Attribute Features
         ///////////////////////////////////////////////////
