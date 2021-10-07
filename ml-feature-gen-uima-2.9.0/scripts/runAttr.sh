@@ -114,25 +114,31 @@ run2010=y
 if [ "$run2010" == "y" ]
 then
 
-    fvHome='data/test/out/features'
-    trOrig=$fvHome'/2010_attr_tr.txt'
-    tsOrig=$fvHome'/2010_attr_ts.txt'
-    tsLbl=$fvHome'/2010_attr_ts.txt.lbl'
-    bow=$fvHome'/2010_attr_bow.txt'
-    lFile=$RESOURCES_DIR'/attr_class_combined.txt'
+    trainHome='data/train/out/i2b2-SVM/features'
+    testHome='data/test/out/i2b2-SVM/features'
+    trOrig=$trainHome'/2010_attr_train.txt'
+    tsOrig=$testHome'/2010_attr_test.txt'
+    tsLbl=$testHome'/2010_attr_test.txt.lbl'
+    bow=$trainHome'/2010_attr_bow.txt'
+    combinedLblFile=$RESOURCES_DIR'/attr_class_combined.txt'
+    i2b2LblFile=$RESOURCES_DIR'/attr_class_i2b2.txt'
 
-    trFile=$LIBLINEARHOME'/2010_attr_tr'	
-    tsFile=$LIBLINEARHOME'/2010_attr_ts'	
+    trFile=$LIBLINEARHOME'/2010_attr_train'
+    tsFile=$LIBLINEARHOME'/2010_attr_test'
     predFile=$LIBLINEARHOME'/2010_attr_pred.txt'
     modelFile=$RESOURCES_DIR'/liblinear/2010_attr_model'
 
-    #java -Xmx10g -cp $LIBLINEARHOME:scripts LIBTrFV2AttrMulti 1 $trOrig $trFile $bow 1 $FEATFILE $lFile
-    #time java -Xmx10g -cp $LIBLINEARHOME:scripts LIBTrFV2AttrMulti 0 $tsOrig $tsFile $bow 1 $FEATFILE $lFile
+    echo "Converting train corpus..."
+    java -Xmx10g -cp $LIBLINEARHOME:scripts LIBTrFV2AttrMulti 1 $trOrig $trFile $bow 1 $FEATFILE $combinedLblFile
+    echo "Converting test corpus..."
+    time java -Xmx10g -cp $LIBLINEARHOME:scripts LIBTrFV2AttrMulti 0 $tsOrig $tsFile $bow 1 $FEATFILE $combinedLblFile
     
     #$LIBLINEARHOME/train -s 2 -v 10 -q $trFile $modelFile
-    
-    #$LIBLINEARHOME/train -s 2 -q $trFile $modelFile
-    #time $LIBLINEARHOME/predict $tsFile $modelFile $predFile
+
+    echo "Training model..."
+    $LIBLINEARHOME/train -s 2 -q $trFile $modelFile
+    echo "Predicting model..."
+    time $LIBLINEARHOME/predict $tsFile $modelFile $predFile
     
     # refDir='/Users/jun/Documents/work/i2b2/2010rel/test/ref/'
     conDir='/Users/pmh/Box Sync/TBIC/2010 i2b2 challenge - rel/test/ref'
@@ -140,8 +146,10 @@ then
     
     mkdir -p $ansDir
     rm $ansDir/*
-    
-    java -Xmx4g -cp scripts AttrOutputAlMulti $tsLbl $predFile "$conDir" $ansDir 1 $lFile
+
+    echo "Converting prediction output..."
+    java -Xmx4g -cp scripts AttrOutputAlMulti $tsLbl $predFile "$conDir" $ansDir 1 $i2b2LblFile
+    echo "Scoring model..."
     java -Xmx1g -cp scripts EvalAlAttrMulti "$conDir" $ansDir
 
 fi
