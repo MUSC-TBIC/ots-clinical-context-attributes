@@ -143,7 +143,7 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             mFeatureSet.add( "exp" );
             mFeatureSet.add( "hist" );
             
-            readClassMapFile() ;
+            readClassMapFile();
             readBowMap( mBowMapFilename , mBowMap );
             
             mConfusionMatrix = new int[ mClassHashMapIndex2Str.size() + 1 ][ mClassHashMapIndex2Str.size() + 1 ];
@@ -589,14 +589,14 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             String attr = "present"; // TODO - c.getAttr();
             if( c.getSubject().equalsIgnoreCase( "not patient" ) ){
                 attr = "not_patient";
-            } else if( c.getPolarity() == -1 ){
-                attr = "negated";
             } else if( c.getUncertainty() == 1 ){
                 attr = "uncertain";
-            } else if( c.getConditional() ){
-                attr = "conditional";
+            } else if( c.getPolarity() == -1 ){
+                attr = "negated";
             } else if( c.getHistoryOf() == 1 ){
                 attr = "hypothetical";
+            } else if( c.getConditional() ){
+                attr = "conditional";
             }
 
             String w = getLists(aJCas, c, "w"); // word
@@ -666,8 +666,24 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             int conceptTokenBegin = -1;
             int conceptTokenEnd = -1;
             try{
-                conceptTokenBegin = offset2TokenMap.get( conceptRelativeBegin );
-                conceptTokenEnd = offset2TokenMap.get( conceptRelativeEnd );
+                while( conceptRelativeBegin > 0 &&
+                       ! offset2TokenMap.containsKey( conceptRelativeBegin ) ){
+                    conceptRelativeBegin--;
+                }
+                if( conceptRelativeBegin == 0 ){
+                    conceptTokenBegin = 0;
+                } else {
+                    conceptTokenBegin = offset2TokenMap.get( conceptRelativeBegin );
+                }
+                while( conceptRelativeEnd < sentenceText.length() &&
+                       ! offset2TokenMap.containsKey( conceptRelativeEnd ) ){
+                    conceptRelativeEnd++;
+                }
+                if( conceptRelativeEnd >= sentenceText.length() ){
+                    conceptTokenEnd = sentenceTokenSpans.size() - 1;
+                } else {
+                    conceptTokenEnd = offset2TokenMap.get( conceptRelativeEnd );
+                }
             } catch(NullPointerException er){
                 mLogger.debug( "\t|" + sentStrs.get(sI - 2) +
                         "\n\t|" + sentenceText +
@@ -677,9 +693,9 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
                         "\n\t|" + c.getCoveredText() + "|" + 
                         String.valueOf( conceptRelativeBegin ) + " - " +
                         String.valueOf( conceptRelativeEnd ) + " | " +
-                        String.valueOf( conceptRelativeBegin ) +
+                        String.valueOf( offset2TokenMap.get( conceptRelativeBegin ) ) +
                         " - " +
-                        String.valueOf( conceptRelativeEnd ) );
+                        String.valueOf( offset2TokenMap.get( conceptRelativeEnd ) ) );
             }
 //            while( sentenceBeginOffset > 0 &&
 //                    ! tokMap.containsKey( sentenceBeginOffset ) ){
@@ -1229,6 +1245,8 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
                 header += "\t" + strPred;
             }
             mLogger.debug( header );
+            System.err.println( "*** Results" );
+            System.err.println( header );
             for( int ref = 0; ref < mClassHashMapIndex2Str.size(); ref++ ){
                 String strRef = mClassHashMapIndex2Str.get( Integer.toString( ref + 1 ) );
                 String row = strRef;
@@ -1243,11 +1261,15 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
                     }
                 }
                 mLogger.debug( row );
+                System.err.println( row );
             }
             double accuracy = Double.valueOf( tp ) / ( Double.valueOf( tp + fp ) );
             mLogger.info( "Match = " + Integer.toString( tp ) + 
                           " Mismatch = " + Integer.toString( fp ) +
                           " Accuracy = " + String.format( "%.2f" , accuracy ) );
+            System.err.println( "Match = " + Integer.toString( tp ) + 
+                                " Mismatch = " + Integer.toString( fp ) +
+                                " Accuracy = " + String.format( "%.2f" , accuracy ) );
         }
     }
 

@@ -1,0 +1,13 @@
+fit.test_flag = true
+fit.engines = cTAKES SBD, OpenNLP Tokenizer, Context Attributes
+fit.writers = XML Out
+
+fit.reader = WebAnno XMI Reader
+fs.in.xmi = /path/to/MUSCCorpus/train_xmi
+
+fs.out.xmi = data/train/out/musc-SVM/xmi
+fs.out.tsv = data/train/out/musc-SVM/tsv
+fs.out.features.dir = data/train/out/musc-SVM/features
+fs.out.features.file = musc_attr_train.txt
+
+fs.error.xmi = /tmp/featuregen/error_xmi

@@ -6,3 +6,4 @@ metadata/
 data/
 
 *.class
+*.properties

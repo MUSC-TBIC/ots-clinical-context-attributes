@@ -104,14 +104,14 @@ public class FeatureGen extends org.apache.uima.fit.component.JCasAnnotator_Impl
 	        }
 	        
 	        if( cmd.hasOption( "version" ) ){
-	            System.out.println( "Configured to run resources for FeatureGen Pipeline (Decovri) " + mVersion );
+	            System.out.println( "Configured to run resources for FeatureGen Pipeline (FeatureGen) " + mVersion );
 	            System.exit(0);
 	        } else if( cmd.hasOption( "c" ) ){
-	            System.out.println( "Configured to run resources for FeatureGen Pipeline (Decovri) " + mVersion + "\n" +
+	            System.out.println( "Configured to run resources for FeatureGen Pipeline (FeatureGen) " + mVersion + "\n" +
 	                    "\nThis option has not yet been implemented." );
 	            System.exit(0);
 	        } else if( cmd.hasOption( "soft-load" ) ){
-	            System.out.println( "Configured to run resources for FeatureGen Pipeline (Decovri) " + mVersion + "\n" +
+	            System.out.println( "Configured to run resources for FeatureGen Pipeline (FeatureGen) " + mVersion + "\n" +
 	                    "\nThis option has not yet been implemented." );
 	            System.exit(0);
 	        }
@@ -144,6 +144,7 @@ public class FeatureGen extends org.apache.uima.fit.component.JCasAnnotator_Impl
 		if( pipeline_reader.equals( "Text Reader" ) ||
             pipeline_reader.equals( "ast Reader" ) ||
             pipeline_reader.equals( "brat Reader" ) ||
+            pipeline_reader.equals( "INCEpTION Reader" ) ||
             pipeline_reader.equals( "WebAnno XMI Reader" ) ){
 			pipeline_modules.add( pipeline_reader );
 		} else {
@@ -204,6 +205,17 @@ public class FeatureGen extends org.apache.uima.fit.component.JCasAnnotator_Impl
                 inputDir = pipeline_properties.getProperty( "fs.in.xmi" );
             }
             mLogger.info( "Loading module 'WebAnno XMI Reader' for " + inputDir );
+            collectionReader = CollectionReaderFactory.createReaderDescription(
+                    FileSystemCollectionReader.class ,
+                    FileSystemCollectionReader.PARAM_INPUTDIR , inputDir );
+        } else if( pipeline_modules.contains( "INCEpTION Reader" ) ){
+            ////////////////////////////////////
+            // Initialize INCEpTION CAS XMI reader
+            String inputDir = "data/input";
+            if( pipeline_properties.containsKey( "fs.in.xmi" ) ){
+                inputDir = pipeline_properties.getProperty( "fs.in.xmi" );
+            }
+            mLogger.info( "Loading module 'INCEpTION Reader' for " + inputDir );
             collectionReader = CollectionReaderFactory.createReaderDescription(
                     FileSystemCollectionReader.class ,
                     FileSystemCollectionReader.PARAM_INPUTDIR , inputDir );
@@ -306,9 +318,14 @@ public class FeatureGen extends org.apache.uima.fit.component.JCasAnnotator_Impl
         ///////////////////////////////////////////////////
         if( pipeline_modules.contains( "FastContext" ) ){
             mLogger.info( "Loading module 'FastContext'" );
+            String classMap = "";
+            if( pipeline_properties.containsKey( "fs.liblinear.classmap" ) ){
+                classMap = pipeline_properties.getProperty( "fs.liblinear.classmap" );
+            }
             AnalysisEngineDescription fastContext = AnalysisEngineFactory.createEngineDescription(
                     FastContextAnnotator.class,
-                    FastContextAnnotator.PARAM_SENTENCETYPE, sentence_type 
+                    FastContextAnnotator.PARAM_SENTENCETYPE, sentence_type , 
+                    FastContextAnnotator.PARAM_CLASSMAP , classMap
                     );
             builder.add( fastContext );
         }

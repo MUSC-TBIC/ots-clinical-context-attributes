@@ -1,0 +1,18 @@
+fit.test_flag = true
+fit.engines = cTAKES SBD, OpenNLP Tokenizer, Context Attributes
+fit.writers = XML Out
+
+fit.reader = brat Reader
+fs.in.text = /path/to/2010-i2b2-challenge-rel/test/txt
+fs.in.ann = /path/to/2010-i2b2-challenge-rel/test/ref
+
+##fs.liblinear.model = No model file for training phase
+fs.liblinear.classmap = resources/attr_class_combined.txt
+fs.liblinear.bowmap = data/train/out/i2b2-SVM/features/2010_attr_bow.txt
+
+fs.out.xmi = data/test/out/i2b2-SVM/xmi
+fs.out.tsv = data/test/out/i2b2-SVM/tsv
+fs.out.features.dir = data/test/out/i2b2-SVM/features
+fs.out.features.file = 2010_attr_test.txt
+
+fs.error.xmi = /tmp/featuregen/error_xmi

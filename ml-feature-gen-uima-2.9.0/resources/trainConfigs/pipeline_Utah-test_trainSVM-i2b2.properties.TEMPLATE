@@ -1,0 +1,14 @@
+fit.test_flag = true
+fit.engines = cTAKES SBD, OpenNLP Tokenizer, Context Attributes
+fit.writers = XML Out
+
+fit.reader = brat Reader
+fs.in.text = /path/to/UtahCorpus/test/txt
+fs.in.ann = /path/to/UtahCorpus/test/ann
+
+fs.out.xmi = data/test/out/utah-SVM/xmi
+fs.out.tsv = data/test/out/utah-SVM/tsv
+fs.out.features.dir = data/test/out/utah-SVM/features
+fs.out.features.file = utah_attr_test.txt
+
+fs.error.xmi = /tmp/featuregen/error_xmi
