@@ -9,6 +9,7 @@ import java.io.PrintStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -21,6 +22,7 @@ import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
 import org.apache.uima.cas.FSIndex;
 import org.apache.uima.cas.FSIterator;
 import org.apache.uima.examples.SourceDocumentInformation;
+import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.tcas.Annotation;
 import org.apache.uima.resource.ResourceInitializationException;
@@ -75,7 +77,7 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
 
     File iv_outputDirectory;
 
-    FastContext fc;
+    FastContext fcEngine;
 
     int sub = 3;
 
@@ -90,15 +92,17 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
         fvFileName = (String) context.getConfigParameterValue(PARAM_FVFILE);
 
         iv_outputDirectory = new File(outputDirectoryName);
-        if(!iv_outputDirectory.exists() || !iv_outputDirectory.isDirectory())
+        if( !iv_outputDirectory.exists() ){
+            iv_outputDirectory.mkdirs();
+        } else if( !iv_outputDirectory.isDirectory() ){
             throw new ResourceInitializationException(
                     new Exception("Parameter setting 'OutputDirectory' does not point to an existing directory."));
-
+        }   
+        
         fvs = new ArrayList<HashMap<String, String>>();
-        //	// Original source:
-        //	//   - https://github.com/jianlins/FastContext/blob/master/conf/context.txt
-        //        //fc = new FastContext("/Users/jun/Documents/work/project/FastContext/context.txt", false);
-        //        fc = new FastContext( "../fastcontext_uima_2.9.0/resources/context.txt", false);
+        // Original source:
+        //   - https://github.com/jianlins/FastContext/blob/master/conf/context.txt
+        fcEngine = new FastContext( "../fastcontext_uima_2.9.0/resources/context.txt", false);
 
         mModel = null;
         mBowMap = new TreeMap<String, Integer>();
@@ -133,14 +137,13 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             mFeatureSet.add( "pp3" );
             mFeatureSet.add( "np3" );
             mFeatureSet.add( "s" );
-            // TODO - add FastContext extraction back as a feature
-//            mFeatureSet.add( "neg" );
-//            mFeatureSet.add( "hyp" );
-//            mFeatureSet.add( "exp" );
-//            mFeatureSet.add( "hist" );
+            // FastContext extracted features
+            mFeatureSet.add( "neg" );
+            mFeatureSet.add( "hyp" );
+            mFeatureSet.add( "exp" );
+            mFeatureSet.add( "hist" );
             
-            
-            readClassMapFile() ;
+            readClassMapFile();
             readBowMap( mBowMapFilename , mBowMap );
             
             mConfusionMatrix = new int[ mClassHashMapIndex2Str.size() + 1 ][ mClassHashMapIndex2Str.size() + 1 ];
@@ -204,7 +207,7 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
     }
 
     private void setSentMap(JCas jCas, HashMap<Integer, Integer> map, FSIterator<?> sentences, 
-            ArrayList<Sentence> sents, ArrayList<String> sentStrs) throws ResourceProcessException	{
+            ArrayList<Sentence> sents, ArrayList<String> sentStrs) throws ResourceProcessException {
         int sNum = 0;
         while (sentences.hasNext()) {
             Sentence s = (Sentence) sentences.next();
@@ -214,22 +217,27 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
 
             for (int i = b; i < e; i++) {
                 map.put(i, sNum);
-            }    		
+            }
             sents.add(s);
 
             String sStr = "";
-            FSIterator<?> tokens = jCas.getAnnotationIndex(BaseToken.type).subiterator(s);		
-            while (tokens.hasNext()) {
-                BaseToken t = (BaseToken) tokens.next();
-                sStr += t.getCoveredText() + " ";
+            // Go through all the concepts using select since subiterator doesn't play nicely with uimaFIT
+            // cf. https://issues.apache.org/jira/browse/CTAKES-16
+            Collection<BaseToken> tokens = JCasUtil.select( jCas , BaseToken.class );
+            for( BaseToken t : tokens ){
+                if( b <= t.getBegin() &&
+                    t.getEnd() <= e ) {
+                    sStr += t.getCoveredText() + " ";
+                }
             }
+            
             sentStrs.add(sStr.trim());
         }
         mLogger.debug( "Sentences found: " + Integer.toString( sNum ) );
     }
 
     private void setTokMap(HashMap<Integer, Integer> map, 
-            ArrayList<BaseToken> tokList, FSIterator<?> tokens) throws ResourceProcessException	{
+            ArrayList<BaseToken> tokList, FSIterator<?> tokens) throws ResourceProcessException {
         int tId = 0;
         while (tokens.hasNext()) {
             BaseToken s = (BaseToken) tokens.next();
@@ -238,7 +246,7 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
 
             for (int i = b; i < e; i++) {
                 map.put(i, tId);
-            }    		
+            }
             tokList.add(s);
             tId++;
         }
@@ -246,9 +254,9 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
 
     private String getLists(JCas jCas, Annotation c, String f) {
         String str = "";
-        FSIterator<?> tokens = jCas.getAnnotationIndex(BaseToken.type).subiterator(c);		
+        FSIterator<?> tokens = jCas.getAnnotationIndex(BaseToken.type).subiterator(c);
         int i = 0;
-        while (tokens.hasNext()) {			
+        while (tokens.hasNext()) {
             BaseToken t = (BaseToken) tokens.next();
 
             String s;
@@ -266,9 +274,9 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             }
 
             if (i == 0) {
-                str = s;		
+                str = s;
             } else {
-                str += "||" + s;							
+                str += "||" + s;
             }
             i++;
         }
@@ -291,14 +299,14 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             str = "<emp>";
         }
         return str;
-    }	
+    }
 
     private String getListsB(JCas jCas, Annotation c, String f) {
         String str = "";
         FSIterator<?> tokens = jCas.getAnnotationIndex(BaseToken.type).subiterator(c);		
         int i = 0;
         String pre = "";
-        while (tokens.hasNext()) {			
+        while (tokens.hasNext()) {
             BaseToken t = (BaseToken) tokens.next();
             String s;
             if (f.equals("w")) {
@@ -314,9 +322,9 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
                 s = t.getCoveredText();
             }
             if (i == 1) {
-                str = pre + " " + s;										
+                str = pre + " " + s;
             } else if (i > 1) {
-                str += "||" + pre + " " + s;										
+                str += "||" + pre + " " + s;
             }
             i++;
             pre = s; 
@@ -363,8 +371,8 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             if (i == iS) {
                 str += s;				
             } else {
-                str += "||" + s;								
-            }			
+                str += "||" + s;
+            }
         }
 
         if (str.trim().isEmpty()) {
@@ -393,10 +401,10 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             }
 
             if (i == iS + 1) {
-                str = pre + " " + s;							
+                str = pre + " " + s;
             } else if ( i > iS + 1){
-                str += "||" + pre + " " + s;								
-            }			
+                str += "||" + pre + " " + s;
+            }
             pre = s;
         }
 
@@ -417,10 +425,10 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
                 break;
             }
             if (i == idx - 1) {
-                str = tokList.get(i).getCoveredText();				
+                str = tokList.get(i).getCoveredText();
             } else {
-                str = tokList.get(i).getCoveredText() + "||" + str;								
-            }			
+                str = tokList.get(i).getCoveredText() + "||" + str;
+            }
         }
 
         if (str.trim().isEmpty()) {
@@ -448,10 +456,10 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             }
 
             if (i == idx + 1) {
-                str = s;			
+                str = s;
             } else {
-                str += "||" + s;							
-            }			
+                str += "||" + s;
+            }
         }
 
         if (str.trim().isEmpty()) {
@@ -480,10 +488,10 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             }
 
             if (i == idx + 2) {
-                str = pre + " " + s;								
+                str = pre + " " + s;
             } else if ( i > idx + 2) {
-                str += "||" + pre + " " + s;								
-            }			
+                str += "||" + pre + " " + s;
+            }
             pre = s;
         }
 
@@ -504,10 +512,10 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             }
 
             if (i == idx + 1) {
-                str = tokList.get(i).getCoveredText();				
+                str = tokList.get(i).getCoveredText();
             } else {
-                str += "||" + tokList.get(i).getCoveredText();							
-            }			
+                str += "||" + tokList.get(i).getCoveredText();
+            }
         }
 
         if (str.trim().isEmpty()) {
@@ -544,7 +552,7 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
         } catch (ResourceProcessException e1) {
             // TODO Auto-generated catch block
             e1.printStackTrace();
-        }			
+        }
 
         HashMap<Integer, Integer> tokMap = new HashMap<>(); 
         ArrayList<BaseToken> tokList = new ArrayList<>();
@@ -567,8 +575,9 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             //			continue;
             //		    }
             conList.add(c);
-        }			
-
+        }
+	
+        String noteBody = aJCas.getDocumentText();
         for (int i = 0; i < conList.size(); i++) {
             IdentifiedAnnotation c = conList.get(i);
 
@@ -580,14 +589,14 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             String attr = "present"; // TODO - c.getAttr();
             if( c.getSubject().equalsIgnoreCase( "not patient" ) ){
                 attr = "not_patient";
-            } else if( c.getPolarity() == -1 ){
-                attr = "negated";
             } else if( c.getUncertainty() == 1 ){
                 attr = "uncertain";
-            } else if( c.getConditional() ){
-                attr = "conditional";
+            } else if( c.getPolarity() == -1 ){
+                attr = "negated";
             } else if( c.getHistoryOf() == 1 ){
                 attr = "hypothetical";
+            } else if( c.getConditional() ){
+                attr = "conditional";
             }
 
             String w = getLists(aJCas, c, "w"); // word
@@ -623,10 +632,10 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             String nwS = getNwordsS(aJCas, tokList, tokMap.get(ea), sentMap, sI);
 
             /* */
-            String sStr = sentStrs.get(sI - 1);
+            String sentenceText = sentStrs.get(sI - 1);
             int cSI = sI;
             while (ea > sents.get(cSI - 1).getEnd()) {
-                sStr += " " + sentStrs.get(cSI++);
+                sentenceText += " " + sentStrs.get(cSI++);
                 mLogger.warn( "The token end (ea=" + Integer.toString( ea ) + 
                         ") exceeds the sentence end (" + Integer.toString( sents.get(cSI - 1).getEnd() ) + ")" );
             }
@@ -634,28 +643,95 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             // TODO - this is a quick fix that needs to be made more robust with
             // an explicit log message explaining why the gap exists
             Integer sentenceBeginOffset = sents.get( sI - 1 ).getBegin();
-            while( sentenceBeginOffset > 0 &&
-                    ! tokMap.containsKey( sentenceBeginOffset ) ){
-                sentenceBeginOffset--;
+//            while( sentenceBeginOffset > 0 &&
+//                    ! tokMap.containsKey( sentenceBeginOffset ) ){
+//                sentenceBeginOffset--;
+//            }
+            Integer sentenceEndOffset = Math.max( sents.get( sI - 1 ).getEnd() ,
+                                                  c.getEnd() );
+            ArrayList<Span> sentenceTokenSpans = SimpleParser.tokenizeOnWhitespaces( sentenceText );
+            HashMap<Integer, Integer> offset2TokenMap = new HashMap<>();
+            int tokenId = 0;
+            for( Span tokenSpan : sentenceTokenSpans ){
+                for( int tokenIndex = tokenSpan.getBegin() ;
+                        tokenIndex <= tokenSpan.getEnd() ; 
+                        tokenIndex++ ){
+                    offset2TokenMap.put( tokenIndex ,  tokenId );
+                }
+                tokenId++;
             }
-            int oTn = tokMap.get( sentenceBeginOffset );
-            int cTs = tokMap.get(ba) - oTn;
-            int cTe = tokMap.get(ea) - oTn;
-
-            if (cTs < 0) {
-                System.out.println(cTs);
-                cTs = 0;
+            int conceptRelativeBegin = c.getBegin() - sentenceBeginOffset;
+            int conceptRelativeEnd = c.getEnd() - sentenceBeginOffset;
+//            mLogger.debug( conceptRelativeBegin + " - " + conceptRelativeEnd );
+            int conceptTokenBegin = -1;
+            int conceptTokenEnd = -1;
+            try{
+                while( conceptRelativeBegin > 0 &&
+                       ! offset2TokenMap.containsKey( conceptRelativeBegin ) ){
+                    conceptRelativeBegin--;
+                }
+                if( conceptRelativeBegin == 0 ){
+                    conceptTokenBegin = 0;
+                } else {
+                    conceptTokenBegin = offset2TokenMap.get( conceptRelativeBegin );
+                }
+                while( conceptRelativeEnd < sentenceText.length() &&
+                       ! offset2TokenMap.containsKey( conceptRelativeEnd ) ){
+                    conceptRelativeEnd++;
+                }
+                if( conceptRelativeEnd >= sentenceText.length() ){
+                    conceptTokenEnd = sentenceTokenSpans.size() - 1;
+                } else {
+                    conceptTokenEnd = offset2TokenMap.get( conceptRelativeEnd );
+                }
+            } catch(NullPointerException er){
+                mLogger.debug( "\t|" + sentStrs.get(sI - 2) +
+                        "\n\t|" + sentenceText +
+                        "\n\t|" + sentStrs.get(sI - 1) +
+                        "\n\t|" + sentStrs.get(sI - 0) +
+                        "\n\t" + sentenceTokenSpans +
+                        "\n\t|" + c.getCoveredText() + "|" + 
+                        String.valueOf( conceptRelativeBegin ) + " - " +
+                        String.valueOf( conceptRelativeEnd ) + " | " +
+                        String.valueOf( offset2TokenMap.get( conceptRelativeBegin ) ) +
+                        " - " +
+                        String.valueOf( offset2TokenMap.get( conceptRelativeEnd ) ) );
             }
-            if (cTe < 0) {
-                System.out.println(cTe);
-                cTe = 0;
-            }
+//            while( sentenceBeginOffset > 0 &&
+//                    ! tokMap.containsKey( sentenceBeginOffset ) ){
+//                sentenceBeginOffset--;
+//            }
+//            int oTn = tokMap.get( sentenceBeginOffset );
+//            int cTs = tokMap.get(ba) - oTn;
+//            int cTe = tokMap.get(ea) - oTn;
+//
+//            if (cTs < 0) {
+//                System.out.println(cTs);
+//                cTs = 0;
+//            }
+//            if (cTe < 0) {
+//                System.out.println(cTe);
+//                cTe = 0;
+//            }
 
             HashMap<String, String> f = new HashMap<>();
             f.put("label", label);
 
-            f.put("attr", attr);						
-
+            f.put("attr", attr);
+	    
+            // 
+            f.put( "concept" , c.getCoveredText() );
+//            mLogger.debug( "c = " + c.getCoveredText() + " [ " + 
+//                    Integer.toString( c.getBegin() ) + " , " + 
+//                    Integer.toString( c.getEnd() ) + " ] " +
+//                    Integer.toString( sentenceEndOffset ) + " " +
+//                    Integer.toString( noteBody.length() ) );
+            f.put( "sentPrefix" , noteBody.substring( Math.max( 0 , 
+                                                                sentenceBeginOffset ) , 
+                                                      c.getBegin() ) );
+            f.put( "sentSuffix" , noteBody.substring( c.getEnd() , 
+                                                      Math.min( noteBody.length() , sentenceEndOffset ) ) );
+            
             //words
             f.put("w",  w);
             f.put("wB",  wB);
@@ -682,8 +758,12 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             f.put("s",  s);
 
 //            /* */
-//            long startTime = System.nanoTime();				
-//            setConTxt("neg", "hyp", "exp", "his", sStr, cTs, cTe, f);
+//            long startTime = System.nanoTime();
+//            setConTxt("neg", "hyp", "exp", "his", sentenceText , cTs, cTe, f);
+            setConTxt( "neg" , "hyp" , "exp" , "his" , 
+                    sentenceText , sentenceTokenSpans , 
+                    conceptTokenBegin , conceptTokenEnd , 
+                    f );
 //            long endTime = System.nanoTime();
 //            /* */
 
@@ -794,6 +874,50 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
       Temporality
       Experiencer
      */
+    
+    /* */
+    public void setConTxt( String lblNegated , String lblHypothetical , 
+                           String lblExperiencer , String lblHistorical , 
+                           String sentenceText , ArrayList<Span> sentenceTokenSpans , 
+                           int conceptTokenBegin , int conceptTokenEnd , 
+                           HashMap<String, String> contextAttributes ) {
+
+        String negValue = "affirm";
+        String hypValue = "certain";
+        String expValue = "patient";
+        String hisValue = "present";
+
+        ArrayList<String> res = fcEngine.processContext( sentenceTokenSpans , 
+                                                         conceptTokenBegin , conceptTokenEnd , 
+                                                         sentenceText , 
+                                                         30 );
+        
+        for (String re : res) {
+            if (re.equalsIgnoreCase("negated")) {
+                negValue = "negated";
+            }
+            if (re.equalsIgnoreCase("nonpatient")) {
+                expValue = "nonpatient";
+            }
+            if (re.equalsIgnoreCase("uncertain")) {
+                hypValue = "uncertain";
+            }
+            if (re.equalsIgnoreCase("historical")) {
+                hisValue = "historical";
+            }
+            if (re.equalsIgnoreCase("hypothetical")) {
+                hisValue = "hypothetical";
+            }
+        }
+
+//        mLogger.debug( "FastContext Result: " + res + 
+//                "\n\t" + negValue + "|" + hypValue + "|" + expValue + "|" + hisValue );
+        
+        contextAttributes.put( lblNegated , negValue );
+        contextAttributes.put( lblHypothetical , hypValue );
+        contextAttributes.put( lblExperiencer , expValue );
+        contextAttributes.put( lblHistorical , hisValue );
+    }
 
     /* */
     public void setConTxt(String negS, String hypS, String expS, String hisS, 
@@ -805,7 +929,7 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
         String his = "present";
 
         ArrayList<Span> sTs = SimpleParser.tokenizeOnWhitespaces(sStr);
-        ArrayList<String> res = fc.processContext(sTs, cTs, cTe, sStr, 30);
+        ArrayList<String> res = fcEngine.processContext(sTs, cTs, cTe, sStr, 30);
 
         for (String re : res) {
             //System.out.println(re);
@@ -829,7 +953,7 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
         f.put(negS, neg);
         f.put(hypS, hyp);
         f.put(expS, exp);
-        f.put(hisS, his);			
+        f.put(hisS, his);
     }
     /* */
 
@@ -843,7 +967,7 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             out.println(f.get("label"));
         }
         out.flush();
-        out.close();		
+        out.close();
     }
 
     // for liblinear
@@ -851,40 +975,51 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
     {
         label(outputDirectoryName + "/" + fvFileName + ".lbl");
 
-        PrintStream out = new PrintStream( new FileOutputStream( outputDirectoryName + "/" + fvFileName ));
+        PrintStream outSvm = new PrintStream( new FileOutputStream( outputDirectoryName + "/" + fvFileName ));
+
+        PrintStream outFastText = new PrintStream( new FileOutputStream( outputDirectoryName + "/" + 
+                                                                         fvFileName + ".ftxt" ) );
 
         for (int i=0; i< fvs.size(); i++) { 
-            StringBuffer sb = new StringBuffer();
+            StringBuffer sbSvm = new StringBuffer();
+            StringBuffer sbFastText = new StringBuffer();
+            
             HashMap<String, String> f = fvs.get(i);
 
-            appendL(sb, f.get("w"), "w");
-            appendL(sb, f.get("wB"), "wB");
+            appendL(sbSvm, f.get("w"), "w");
+            appendL(sbSvm, f.get("wB"), "wB");
 
-            appendL(sb, f.get("pw3"), "pw3");
-            appendL(sb, f.get("pwB3"), "pwB3");
-            appendL(sb, f.get("pw7"), "pw7");
-            appendL(sb, f.get("pwS"), "pwS");
+            appendL(sbSvm, f.get("pw3"), "pw3");
+            appendL(sbSvm, f.get("pwB3"), "pwB3");
+            appendL(sbSvm, f.get("pw7"), "pw7");
+            appendL(sbSvm, f.get("pwS"), "pwS");
 
-            appendL(sb, f.get("nw3"), "nw3");
-            appendL(sb, f.get("nwB3"), "nwB3");
-            appendL(sb, f.get("nw7"), "nw7");
-            appendL(sb, f.get("nwS"), "nwS");
+            appendL(sbSvm, f.get("nw3"), "nw3");
+            appendL(sbSvm, f.get("nwB3"), "nwB3");
+            appendL(sbSvm, f.get("nw7"), "nw7");
+            appendL(sbSvm, f.get("nwS"), "nwS");
 
-            append(sb, f.get("p"), "p");
-            append(sb, f.get("pp3"), "pp3");
-            append(sb, f.get("np3"), "np3");
+            append(sbSvm, f.get("p"), "p");
+            append(sbSvm, f.get("pp3"), "pp3");
+            append(sbSvm, f.get("np3"), "np3");
 
-            appendL(sb, f.get("s"), "s");
+            appendL(sbSvm, f.get("s"), "s");
 
-            append(sb, f.get("neg"), "neg");
-            append(sb, f.get("hyp"), "hyp");
-            append(sb, f.get("exp"), "exp");
-            append(sb, f.get("his"), "his");
+            append(sbSvm, f.get("neg"), "neg");
+            append(sbSvm, f.get("hyp"), "hyp");
+            append(sbSvm, f.get("exp"), "exp");
+            append(sbSvm, f.get("his"), "his");
 
-            out.println(f.get("attr") + "||" + sb.toString());		    	        
+            outSvm.println(f.get("attr") + "||" + sbSvm.toString());
+            outFastText.println( "__label__" + f.get( "attr" ) + " " + 
+                    f.get( "sentPrefix" ) + 
+                    "@CONS$ " + f.get( "concept" ) + " @CONS$" + 
+                    f.get( "sentSuffix" ) );
         }
-        out.flush();
-        out.close();
+        outSvm.flush();
+        outSvm.close();
+        outFastText.flush();
+        outFastText.close();
 
     }
 
@@ -904,11 +1039,11 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
             String pwS = appendFN(f.get("pwS"));
             String nwS = appendFN(f.get("nwS"));
 
-            String cStr = pwS + " @CON$ " + w + " @CON$ " + nwS;            
+            String cStr = pwS + " @CON$ " + w + " @CON$ " + nwS;
             out.println("__label__" + f.get("attr") + " , " + cStr);
         }
         out.flush();
-        out.close();		
+        out.close();
     }
 
 
@@ -1018,7 +1153,7 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
                 continue;
             }
             tmp += prefix + "_" + strA[j] + "||";
-        }        
+        }
 
         sb.append(tmp);
     }
@@ -1043,7 +1178,7 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
                 continue;
             }
             tmp += strA[j] + " ";
-        }        
+        }
 
         return tmp.trim();
     }
@@ -1099,35 +1234,43 @@ public class AlAttrFeatureGen extends JCasAnnotator_ImplBase {
     }
 
     public void destroy() {
-        int tp = 0;
-        int fp = 0;
-        int tn = 0;
-        int fn = 0;
-        String header = "";
-        for( int pred = 0; pred < mClassHashMapIndex2Str.size(); pred++ ){
-            String strPred = mClassHashMapIndex2Str.get( Integer.toString( pred + 1 ) );
-            header += "\t" + strPred;    
-        }
-        mLogger.debug( header );
-        for( int ref = 0; ref < mClassHashMapIndex2Str.size(); ref++ ){
-            String strRef = mClassHashMapIndex2Str.get( Integer.toString( ref + 1 ) );
-            String row = strRef;
+        if( mModel != null ){
+            int tp = 0;
+            int fp = 0;
+            int tn = 0;
+            int fn = 0;
+            String header = "";
             for( int pred = 0; pred < mClassHashMapIndex2Str.size(); pred++ ){
                 String strPred = mClassHashMapIndex2Str.get( Integer.toString( pred + 1 ) );
-                int count = mConfusionMatrix[ ref ][ pred ];
-                row += "\t" + Integer.toString( count );
-                if( strRef.equals( strPred ) ){
-                    tp += count;
-                } else {
-                    fp += count;
-                }
+                header += "\t" + strPred;
             }
-            mLogger.debug( row );
+            mLogger.debug( header );
+            System.err.println( "*** Results" );
+            System.err.println( header );
+            for( int ref = 0; ref < mClassHashMapIndex2Str.size(); ref++ ){
+                String strRef = mClassHashMapIndex2Str.get( Integer.toString( ref + 1 ) );
+                String row = strRef;
+                for( int pred = 0; pred < mClassHashMapIndex2Str.size(); pred++ ){
+                    String strPred = mClassHashMapIndex2Str.get( Integer.toString( pred + 1 ) );
+                    int count = mConfusionMatrix[ ref ][ pred ];
+                    row += "\t" + Integer.toString( count );
+                    if( strRef.equals( strPred ) ){
+                        tp += count;
+                    } else {
+                        fp += count;
+                    }
+                }
+                mLogger.debug( row );
+                System.err.println( row );
+            }
+            double accuracy = Double.valueOf( tp ) / ( Double.valueOf( tp + fp ) );
+            mLogger.info( "Match = " + Integer.toString( tp ) + 
+                          " Mismatch = " + Integer.toString( fp ) +
+                          " Accuracy = " + String.format( "%.2f" , accuracy ) );
+            System.err.println( "Match = " + Integer.toString( tp ) + 
+                                " Mismatch = " + Integer.toString( fp ) +
+                                " Accuracy = " + String.format( "%.2f" , accuracy ) );
         }
-        double accuracy = Double.valueOf( tp ) / ( Double.valueOf( tp + fp ) );
-        mLogger.info( "Match = " + Integer.toString( tp ) + 
-                      " Mismatch = " + Integer.toString( fp ) +
-                      " Accuracy = " + String.format( "%.2f" , accuracy ) );
     }
 
 }

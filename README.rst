@@ -2,6 +2,19 @@
 Building
 ========
 
+
+
+Python Set-Up
+-------------
+
+.. code:: bash
+
+   conda create -n word-embeddings-py3.7 python=3.7
+   conda activate word-embeddings-py3.7
+	  
+Java Set-Up
+-----------
+
 .. code:: bash
 
    export JAVA_HOME=/path/to/jdk1.8.0_131.jdk/Contents/Home
@@ -37,12 +50,20 @@ Building
 Running
 =======
 
+A sample scripts is available under:
+
+- ml-feature-gen-uima-2.9.0/train.sh
+
+- ml-feature-gen-uima-2.9.0/test.sh
+
+- ml-feature-gen-uima-2.9.0/scripts/runAttr.sh
+
 .. code:: bash
 
    cp resources/pipeline.properties.TEMPLATE resources/pipeline.properties
    
    export JAVA_HOME=/path/to/jdk1.8.0_131.jdk/Contents/Home
-   export VERSION=21.37.0
+   export VERSION=21.40.3
    
    java -cp \
        resources:target/classes:target/ml-feature-gen-${VERSION}-SNAPSHOT-jar-with-dependencies.jar \
@@ -52,6 +73,4 @@ Running
        resources:target/classes:target/ml-feature-gen-${VERSION}-SNAPSHOT-jar-with-dependencies.jar \
        edu.musc.tbic.uima.FeatureGen \
        --pipeline-properties pipeline.properties
-
-
 

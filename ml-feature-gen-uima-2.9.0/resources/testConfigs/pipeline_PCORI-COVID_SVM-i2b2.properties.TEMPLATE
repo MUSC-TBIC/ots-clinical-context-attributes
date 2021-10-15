@@ -1,0 +1,17 @@
+fit.test_flag = true
+fit.engines = cTAKES SBD, OpenNLP Tokenizer, Context Attributes
+fit.writers = XML Out
+
+fit.reader = INCEpTION Reader
+fs.in.xmi = /path/to/PCORI-COVID/curated
+
+fs.liblinear.model = resources/liblinear/$MODELFILE
+fs.liblinear.classmap = resources/attr_class_combined.txt
+fs.liblinear.bowmap = $BOWMAP
+
+fs.out.xmi = data/test/out/pcoriCovid/i2b2-SVM/xmi
+fs.out.tsv = data/test/out/pcoriCovid/i2b2-SVM/tsv
+fs.out.features.dir = data/test/out/pcoriCovid/i2b2-SVM/features
+fs.out.features.file = 2010_attr_test.txt
+
+fs.error.xmi = /tmp/featuregen/error_xmi

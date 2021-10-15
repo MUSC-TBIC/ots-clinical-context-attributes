@@ -504,7 +504,7 @@ public class FileSystemCollectionReader extends CollectionReader_ImplBase {
                     text += eElement.getAttribute( "sofaString" );
                 }
             }
-            //
+            // custom:Problems are WebAnno CAS XMI output
             NodeList problemList = document.getElementsByTagName( "custom:Problems" );
             for( int temp = 0; 
                     temp < problemList.getLength(); 
@@ -529,6 +529,104 @@ public class FileSystemCollectionReader extends CollectionReader_ImplBase {
                     String negatedStatus = eElement.getAttribute( "negated" );
                     String notPatientStatus = eElement.getAttribute( "not_patient" );
                     String uncertainStatus = eElement.getAttribute( "uncertain" );
+                    if( conditionalStatus.equalsIgnoreCase( "true" ) ){
+                        iaConcept.setConditional( true );
+                    }
+                    if( genericStatus.equalsIgnoreCase( "true" ) ){
+                        iaConcept.setGeneric( true );
+                    }
+                    if( historicalStatus.equalsIgnoreCase( "true" ) ){
+                        iaConcept.setHistoryOf( 1 );
+                    }
+                    if( negatedStatus.equalsIgnoreCase( "true" ) ){
+                        iaConcept.setPolarity( -1 );
+                    }
+                    if( notPatientStatus.equalsIgnoreCase( "true" ) ){
+                        iaConcept.setSubject( "not patient" );
+                    }
+                    if( uncertainStatus.equalsIgnoreCase( "true" ) ){
+                        iaConcept.setUncertainty( 1 );
+                    }
+                    iaConcept.addToIndexes();
+                }
+            }
+            // custom:Entities are WebAnno CAS XMI output
+            NodeList entityList = document.getElementsByTagName( "custom:Entities" );
+            for( int temp = 0; 
+                    temp < entityList.getLength(); 
+                    temp++ ) {
+                Node symptomNode = entityList.item( temp );
+                if( symptomNode.getNodeType() == Node.ELEMENT_NODE) {
+                    Element eElement = (Element) symptomNode;
+                    if( ! eElement.getAttribute( "Problems" ).equalsIgnoreCase( "Symptom" ) ){
+                        continue;
+                    }
+                    int beginOffset = Integer.parseInt( eElement.getAttribute( "begin" ) );
+                    int endOffset = Integer.parseInt( eElement.getAttribute( "end" ) );
+                    IdentifiedAnnotation iaConcept = new IdentifiedAnnotation( jcas ,
+                            beginOffset ,
+                            endOffset );
+                    iaConcept.setPolarity( 1 );
+                    iaConcept.setSubject( "patient" );
+                    iaConcept.setConditional( false );
+                    iaConcept.setGeneric( false );
+                    iaConcept.setHistoryOf( 0 );
+                    iaConcept.setUncertainty( 0 );
+                    String conditionalStatus = eElement.getAttribute( "Conditional" );
+                    String genericStatus = eElement.getAttribute( "Generic" );
+                    String historicalStatus = eElement.getAttribute( "Historical" );
+                    String negatedStatus = eElement.getAttribute( "Negated" );
+                    String notPatientStatus = eElement.getAttribute( "NotPatient" );
+                    String uncertainStatus = eElement.getAttribute( "Uncertain" );
+                    if( conditionalStatus.equalsIgnoreCase( "true" ) ){
+                        iaConcept.setConditional( true );
+                    }
+                    if( genericStatus.equalsIgnoreCase( "true" ) ){
+                        iaConcept.setGeneric( true );
+                    }
+                    if( historicalStatus.equalsIgnoreCase( "true" ) ){
+                        iaConcept.setHistoryOf( 1 );
+                    }
+                    if( negatedStatus.equalsIgnoreCase( "true" ) ){
+                        iaConcept.setPolarity( -1 );
+                    }
+                    if( notPatientStatus.equalsIgnoreCase( "true" ) ){
+                        iaConcept.setSubject( "not patient" );
+                    }
+                    if( uncertainStatus.equalsIgnoreCase( "true" ) ){
+                        iaConcept.setUncertainty( 1 );
+                    }
+                    iaConcept.addToIndexes();
+                }
+            }
+            // custom:CovidNlpEntities are INCEpTION CAS XMI output
+            NodeList symptomList = document.getElementsByTagName( "custom:CovidNlpEntities" );
+            for( int temp = 0; 
+                    temp < symptomList.getLength(); 
+                    temp++ ) {
+                Node symptomNode = symptomList.item( temp );
+                if( symptomNode.getNodeType() == Node.ELEMENT_NODE) {
+                    Element eElement = (Element) symptomNode;
+                    if( ! eElement.getAttribute( "NormalizedConcept" ).equalsIgnoreCase( "Sign or Symptom" ) ){
+                        continue;
+                    }
+                    int beginOffset = Integer.parseInt( eElement.getAttribute( "begin" ) );
+                    int endOffset = Integer.parseInt( eElement.getAttribute( "end" ) );
+                    IdentifiedAnnotation iaConcept = new IdentifiedAnnotation( jcas ,
+                            beginOffset ,
+                            endOffset );
+                    iaConcept.setPolarity( 1 );
+                    iaConcept.setSubject( "patient" );
+                    iaConcept.setConditional( false );
+                    iaConcept.setGeneric( false );
+                    iaConcept.setHistoryOf( 0 );
+                    iaConcept.setUncertainty( 0 );
+                    String conditionalStatus = eElement.getAttribute( "Conditional" );
+                    String genericStatus = eElement.getAttribute( "Generic" );
+                    String historicalStatus = eElement.getAttribute( "Historical" );
+                    String negatedStatus = eElement.getAttribute( "Negated" );
+                    String notPatientStatus = eElement.getAttribute( "NotPatient" );
+                    String uncertainStatus = eElement.getAttribute( "Uncertain" );
                     if( conditionalStatus.equalsIgnoreCase( "true" ) ){
                         iaConcept.setConditional( true );
                     }
